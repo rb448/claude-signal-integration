@@ -3,8 +3,13 @@
 import asyncio
 from typing import AsyncIterator, Optional
 
+import structlog
 import websockets
 from websockets.asyncio.client import ClientConnection
+
+from .rate_limiter import RateLimiter
+
+logger = structlog.get_logger(__name__)
 
 
 class SignalClient:
@@ -19,6 +24,7 @@ class SignalClient:
         self.api_url = api_url
         self._connection: Optional[ClientConnection] = None
         self._connected: bool = False
+        self._rate_limiter = RateLimiter()
 
     async def connect(self) -> None:
         """Establish WebSocket connection to Signal API.
@@ -50,12 +56,31 @@ class SignalClient:
         Raises:
             RuntimeError: If not connected to Signal API
             ValueError: If recipient or text is empty
+
+        Note:
+            Rate limiting is automatically applied to prevent Signal API rate limit errors.
+            May introduce delays if sending messages rapidly.
         """
         if not self._connected or not self._connection:
             raise RuntimeError("Not connected to Signal API. Call connect() first.")
 
         if not recipient or not text:
             raise ValueError("Recipient and text must not be empty")
+
+        # Apply rate limiting before sending
+        delay = await self._rate_limiter.acquire()
+        if delay > 0:
+            logger.info(
+                "rate_limit_delay_applied",
+                delay_seconds=delay,
+                recipient=recipient
+            )
+        elif self._rate_limiter.current_backoff_level > 0:
+            logger.warning(
+                "rate_limit_backoff_active",
+                backoff_level=self._rate_limiter.current_backoff_level,
+                recipient=recipient
+            )
 
         # Send message via WebSocket (format depends on signal-cli-rest-api protocol)
         # This is a basic implementation - actual protocol may vary
@@ -71,6 +96,11 @@ class SignalClient:
 
         try:
             await self._connection.send(str(message_payload))
+            logger.debug(
+                "message_sent",
+                recipient=recipient,
+                text_length=len(text)
+            )
         except Exception as e:
             raise RuntimeError(f"Failed to send message: {e}")
 
