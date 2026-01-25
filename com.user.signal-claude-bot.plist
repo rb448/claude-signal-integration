@@ -8,7 +8,8 @@
     <key>ProgramArguments</key>
     <array>
         <string>/Users/rossbrown/Desktop/DevProjects/Claude/claude-signal-integration/.venv/bin/python3</string>
-        <string>/Users/rossbrown/Desktop/DevProjects/Claude/claude-signal-integration/src/daemon/service.py</string>
+        <string>-m</string>
+        <string>src.daemon.service</string>
     </array>
 
     <key>WorkingDirectory</key>
