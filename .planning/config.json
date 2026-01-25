@@ -1,4 +1,6 @@
 {
+  "project_name": "claude-signal-integration",
+  "project_id": "signal",
   "mode": "yolo",
   "depth": "comprehensive",
   "parallelization": {

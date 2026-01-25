@@ -1,0 +1,39 @@
+# GSD Project Marker
+
+**Project:** claude-signal-integration
+**Project ID:** signal
+**Planning Directory:** .planning/
+
+This marker file identifies this as a GSD-managed project using standard naming conventions.
+
+## Directory Structure
+
+```
+claude-signal-integration/
+├── .gsd-project              # This file - project identifier
+├── .planning/                # Standard GSD planning directory
+│   ├── config.json          # Project configuration
+│   ├── PROJECT.md           # Project definition
+│   ├── ROADMAP.md           # Phase roadmap
+│   ├── STATE.md             # Current state
+│   ├── REQUIREMENTS.md      # Requirements traceability
+│   └── phases/
+│       └── 01-signal-core-infrastructure/
+│           ├── 01-01-PLAN.md
+│           ├── 01-02-PLAN.md
+│           └── 01-03-PLAN.md
+├── src/                     # Source code
+│   ├── signal/              # Signal client
+│   ├── daemon/              # Daemon service
+│   └── auth/                # Authentication
+├── tests/                   # Test suite
+└── README.md
+```
+
+## Project Isolation
+
+Projects are isolated by directory structure:
+- **CryptoTradingApp:** `/Users/rossbrown/Desktop/DevProjects/Claude/.planning/`
+- **Signal Integration:** `/Users/rossbrown/Desktop/DevProjects/Claude/claude-signal-integration/.planning/`
+
+Both use standard GSD naming (`.planning/`, `STATE.md`, etc.) without conflicts.
