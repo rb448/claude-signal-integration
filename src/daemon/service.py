@@ -9,6 +9,7 @@ from typing import Optional
 import structlog
 from aiohttp import web
 
+from ..auth.phone_verifier import PhoneVerifier
 from ..signal.client import SignalClient
 from ..signal.queue import MessageQueue
 
@@ -30,6 +31,7 @@ class ServiceDaemon:
         """
         self.signal_client = SignalClient(api_url=signal_api_url)
         self.message_queue = MessageQueue()
+        self.phone_verifier = PhoneVerifier()
         self._shutdown_event = asyncio.Event()
         self._health_app: Optional[web.Application] = None
         self._health_runner: Optional[web.AppRunner] = None
@@ -89,8 +91,28 @@ class ServiceDaemon:
         Args:
             message: Message data to process
         """
-        # Placeholder for message processing logic
-        # Will be expanded in future phases with authentication and command handling
+        # Extract sender phone number from message
+        # Message format depends on signal-cli-rest-api protocol
+        sender = message.get("sender", message.get("source", ""))
+
+        # Verify sender is authorized
+        if not self.phone_verifier.verify(sender):
+            logger.warning(
+                "message_ignored_unauthorized",
+                sender=sender,
+                message_preview=str(message)[:100]
+            )
+            return
+
+        # Process authorized message
+        logger.info(
+            "message_processing_authorized",
+            sender=sender,
+            message=message
+        )
+
+        # Placeholder for command handling logic
+        # Will be expanded in future phases with Claude API integration
         logger.debug("message_received", message=message)
 
     async def run(self) -> None:
