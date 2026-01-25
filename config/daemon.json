@@ -1,0 +1,6 @@
+{
+  "authorized_number": "+1234567890",
+  "log_level": "INFO",
+  "signal_api_url": "ws://localhost:8080",
+  "health_check_port": 8081
+}
