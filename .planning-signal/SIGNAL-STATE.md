@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 1 of 10 (Core Infrastructure & Signal Integration)
-Plan: 1 of 3 in phase (just completed 01-01-PLAN.md)
+Plan: 2 of 3 in phase (just completed 01-02-PLAN.md)
 Status: In progress
-Last activity: 2026-01-25 — Completed 01-01-PLAN.md (Signal API Infrastructure)
+Last activity: 2026-01-25 — Completed 01-02-PLAN.md (Message Queue and Rate Limiting)
 
-Progress: █░░░░░░░░░ 10%
+Progress: ██░░░░░░░░ 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 5 min
-- Total execution time: 0.08 hours
+- Total plans completed: 2
+- Average duration: 14 min
+- Total execution time: 0.47 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 - Core Infrastructure | 1/3 | 5min | 5min |
+| 1 - Core Infrastructure | 2/3 | 28min | 14min |
 
 **Recent Trend:**
-- Last 5 plans: 5min (01-01)
-- Trend: Just started
+- Last 5 plans: 5min (01-01), 23min (01-02)
+- Trend: Consistent velocity
 
 ## Accumulated Context
 
@@ -46,6 +46,10 @@ Recent decisions affecting current work:
 | Python 3.11+ as primary language | 01-01 | Superior asyncio and Claude SDK integration | Better async patterns, official SDK support |
 | websockets library over aiohttp WebSocket | 01-01 | Dedicated WebSocket library with cleaner async API | Simpler implementation, better error handling |
 | Virtual environment for dependency isolation | 01-01 | macOS system Python restrictions, safer isolation | No conflicts with system packages |
+| Conservative 30 messages/minute rate limit | 01-02 | Signal API limits unknown, defensive approach from PITFALLS research | Prevents 413 rate limit errors |
+| Token bucket with 5-message burst allowance | 01-02 | Natural conversation flow requires instant responses | Responsive bot while preventing sustained bursts |
+| Exponential backoff with 60s cooldown | 01-02 | PITFALLS research shows backoff prevents thundering herd | Graceful degradation under load, auto-recovery |
+| Queue overflow drops oldest messages | 01-02 | Alternative (blocking) could freeze bot | Prevents memory exhaustion, keeps recent commands |
 
 ### Pending Todos
 
@@ -57,6 +61,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25 20:00
-Stopped at: Completed 01-01-PLAN.md - Signal API Infrastructure
+Last session: 2026-01-25 20:27
+Stopped at: Completed 01-02-PLAN.md - Message Queue and Rate Limiting
 Resume file: None (plan complete)
