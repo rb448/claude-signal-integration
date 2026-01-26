@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** Enable complete Claude Code functionality from mobile without requiring GitHub repos - users can continue development work with local directories while away from their desk.
-**Current focus:** Phase 1 — Core Infrastructure & Signal Integration
+**Current focus:** Phase 2 — Session Management & Durable Execution
 
 ## Current Position
 
-Phase: 1 of 10 (Core Infrastructure & Signal Integration)
-Plan: 4 of 4 in phase (just completed 01-04-PLAN.md)
-Status: Phase 1 complete (gap closure plan executed)
-Last activity: 2026-01-26 — Completed 01-04-PLAN.md (Message Receiving Loop - Gap Closure)
+Phase: 2 of 10 (Session Management & Durable Execution)
+Plan: 1 of 4 in phase (just completed 02-01-PLAN.md)
+Status: In progress
+Last activity: 2026-01-26 — Completed 02-01-PLAN.md (Session Persistence with SQLite)
 
-Progress: ████░░░░░░ 40%
+Progress: █████░░░░░ 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 9.5 min
-- Total execution time: 0.63 hours
+- Total plans completed: 5
+- Average duration: 8.2 min
+- Total execution time: 0.68 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
+| 2 - Session Management | 1/4 | 3min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 5min (01-01), 23min (01-02), 6min (01-03), 4min (01-04)
-- Trend: Accelerating (Phase 1 complete with gap closure)
+- Last 5 plans: 23min (01-02), 6min (01-03), 4min (01-04), 3min (02-01)
+- Trend: Strong acceleration with TDD methodology
 
 ## Accumulated Context
 
@@ -56,6 +57,10 @@ Recent decisions affecting current work:
 | Health check on port 8081 | 01-03 | Separate from Signal API for independent monitoring | Can verify daemon status even if Signal offline |
 | Concurrent tasks with asyncio.gather() | 01-04 | Both receive_task and queue_task need graceful cancellation | Clean shutdown of all daemon tasks |
 | Inline receive_loop() in run() method | 01-04 | 11-line function tightly coupled to daemon state | Simpler code structure, all coordination in one place |
+| SQLite with WAL mode for sessions | 02-01 | Concurrent access safety needed for async operations | Multiple reads possible during writes, crash-safe |
+| Session context as JSON blob | 02-01 | Context structure will evolve with conversation features | No schema migrations needed, flexible storage |
+| UUID4 for session IDs | 02-01 | Prevents collisions in concurrent session creation | Globally unique IDs, no coordination required |
+| UTC-aware datetime.now(UTC) | 02-01 | datetime.utcnow() deprecated in Python 3.12+ | Future-proof timestamps, zero warnings |
 
 ### Pending Todos
 
@@ -67,6 +72,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-26 01:26
-Stopped at: Completed 01-04-PLAN.md - Message Receiving Loop (Phase 1 gap closure complete)
-Resume file: None (Phase 1 fully complete with verified message receiving, ready for Phase 2)
+Last session: 2026-01-26 02:00
+Stopped at: Completed 02-01-PLAN.md - Session Persistence (Phase 2 started, TDD foundation established)
+Resume file: None (Ready for 02-02-PLAN.md - Session State Machine)
