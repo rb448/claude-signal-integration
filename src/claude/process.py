@@ -38,7 +38,7 @@ class ClaudeProcess:
         self._process: Optional[asyncio.subprocess.Process] = None
         self._log = logger.bind(session_id=session_id, project_path=project_path)
 
-    async def start(self) -> None:
+    async def start(self, conversation_history: Optional[dict] = None) -> None:
         """
         Spawn Claude Code subprocess.
 
@@ -47,12 +47,21 @@ class ClaudeProcess:
         - cwd parameter isolates working directory
         - stdout/stderr captured for debugging
 
+        Args:
+            conversation_history: Optional conversation history for session resume.
+                                 Stored for Phase 3 usage (not applied to CLI yet).
+
         Raises:
             RuntimeError: If process already running
             FileNotFoundError: If claude-code not in PATH
         """
         if self._process is not None and self.is_running:
             raise RuntimeError(f"Process already running for session {self.session_id}")
+
+        # Store conversation history for Phase 3 usage
+        # conversation_history will be used in Phase 3 to restore Claude Code CLI context
+        # For now, stored but not applied (Phase 3: Claude integration implements restoration)
+        self._conversation_history = conversation_history or {}
 
         self._log.info("starting_claude_process")
 
