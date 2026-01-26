@@ -14,6 +14,9 @@ from ..signal.client import SignalClient
 from ..signal.queue import MessageQueue
 from ..session import SessionManager, SessionLifecycle, CrashRecovery, SessionCommands
 from ..claude import ClaudeProcess
+from ..claude.orchestrator import ClaudeOrchestrator
+from ..claude.parser import OutputParser
+from ..claude.responder import SignalResponder
 
 logger = structlog.get_logger(__name__)
 
@@ -42,10 +45,22 @@ class ServiceDaemon:
         self.session_manager = SessionManager()
         self.session_lifecycle = SessionLifecycle(self.session_manager)
         self.crash_recovery = CrashRecovery(self.session_manager, self.session_lifecycle)
+
+        # Claude integration components
+        self.output_parser = OutputParser()
+        self.signal_responder = SignalResponder()
+        self.claude_orchestrator = ClaudeOrchestrator(
+            bridge=None,  # Bridge set when session starts
+            parser=self.output_parser,
+            responder=self.signal_responder,
+            send_signal=self.signal_client.send_message
+        )
+
         self.session_commands = SessionCommands(
             self.session_manager,
             self.session_lifecycle,
-            lambda sid, path: ClaudeProcess(sid, path)
+            lambda sid, path: ClaudeProcess(sid, path),
+            claude_orchestrator=self.claude_orchestrator
         )
 
     async def _health_check_handler(self, request: web.Request) -> web.Response:
@@ -118,28 +133,19 @@ class ServiceDaemon:
             )
             return
 
-        # Route /session commands
-        if text.startswith("/session"):
-            logger.info("routing_session_command", sender=sender, command=text)
-            response = await self.session_commands.handle(thread_id, text)
-            # Send response back to user
+        # Route all commands through session_commands
+        # SessionCommands will route /session commands vs Claude commands
+        logger.info("routing_command", sender=sender, command=text[:50])
+        response = await self.session_commands.handle(thread_id, text)
+
+        # Send response back to user if there is one
+        # (Claude commands return None as orchestrator handles streaming responses)
+        if response is not None:
             try:
                 await self.signal_client.send_message(sender, response)
-                logger.info("session_command_response", response=response)
+                logger.info("command_response_sent", response_preview=response[:100])
             except Exception as e:
                 logger.error("send_response_failed", error=str(e), recipient=sender)
-            return
-
-        # Process authorized message
-        logger.info(
-            "message_processing_authorized",
-            sender=sender,
-            message=message
-        )
-
-        # Placeholder for other command handling logic
-        # Will be expanded in future phases with Claude API integration
-        logger.debug("message_received", message=message)
 
     async def run(self) -> None:
         """Run the daemon service.
