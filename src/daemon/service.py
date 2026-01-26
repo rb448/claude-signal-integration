@@ -146,6 +146,23 @@ class ServiceDaemon:
                 self.message_queue.process_queue(self._process_message)
             )
 
+            # Start message receiving loop
+            async def receive_loop():
+                """Continuously receive messages from Signal and put them in queue."""
+                try:
+                    async for message in self.signal_client.receive_messages():
+                        await self.message_queue.put(message)
+                        logger.info(
+                            "message_received_enqueued",
+                            sender=message.get("source"),
+                            timestamp=message.get("timestamp")
+                        )
+                except Exception as e:
+                    logger.error("receive_loop_error", error=str(e))
+                    raise
+
+            receive_task = asyncio.create_task(receive_loop())
+
             logger.info("daemon_running")
 
             # Wait for shutdown signal
@@ -153,11 +170,12 @@ class ServiceDaemon:
 
             logger.info("daemon_shutting_down")
 
-            # Stop message queue processing
+            # Stop message queue processing and receiving
             self.message_queue.stop_processing()
             queue_task.cancel()
+            receive_task.cancel()
             try:
-                await queue_task
+                await asyncio.gather(queue_task, receive_task, return_exceptions=True)
             except asyncio.CancelledError:
                 pass
 
