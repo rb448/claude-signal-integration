@@ -1,10 +1,14 @@
 """Tests for daemon service."""
 
 import asyncio
+import tempfile
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from src.daemon.service import ServiceDaemon
+from src.thread.mapper import ThreadMapper
 
 
 @pytest.mark.asyncio
@@ -89,6 +93,10 @@ async def test_message_receiving_loop():
     daemon.signal_client = MockSignalClient()
     daemon.message_queue = MockMessageQueue()
 
+    # Mock health server to prevent port conflicts
+    daemon._start_health_server = AsyncMock()
+    daemon._stop_health_server = AsyncMock()
+
     # Run daemon for short duration
     async def run_briefly():
         try:
@@ -107,3 +115,182 @@ async def test_message_receiving_loop():
 
     # Verify message is in queue
     assert daemon.message_queue.size > 0, "Message should be in queue"
+
+
+@pytest.mark.asyncio
+async def test_daemon_start_with_thread_mappings(capsys):
+    """
+    Daemon loads existing thread mappings on startup.
+
+    Verifies that when thread_mappings.db contains mappings,
+    the daemon:
+    1. Successfully initializes ThreadMapper
+    2. Loads existing mappings
+    3. Logs the count of loaded mappings
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Setup: Create thread_mappings.db with 2 mappings
+        thread_db_path = Path(tmpdir) / "thread_mappings.db"
+        mapper = ThreadMapper(str(thread_db_path))
+        await mapper.initialize()
+
+        # Create two test project directories and mappings
+        project1 = Path(tmpdir) / "project1"
+        project2 = Path(tmpdir) / "project2"
+        project1.mkdir()
+        project2.mkdir()
+
+        await mapper.map("thread-123", str(project1))
+        await mapper.map("thread-456", str(project2))
+        await mapper.close()
+
+        # Create daemon with this database
+        daemon = ServiceDaemon()
+        daemon.thread_mapper = ThreadMapper(str(thread_db_path))
+
+        # Mock dependencies to prevent actual connections
+        daemon.signal_client = AsyncMock()
+        daemon.signal_client.connect = AsyncMock(side_effect=ConnectionError("Mock stop"))
+        daemon.signal_client.api_url = "ws://mock:8080"
+        daemon.session_manager = AsyncMock()
+        daemon.session_manager.initialize = AsyncMock()
+        daemon.session_manager.close = AsyncMock()
+        daemon.crash_recovery = AsyncMock()
+        daemon.crash_recovery.recover = AsyncMock(return_value=[])
+
+        # Mock health server to prevent port conflicts
+        daemon._start_health_server = AsyncMock()
+        daemon._stop_health_server = AsyncMock()
+
+        # Run daemon briefly (will fail at signal_client.connect, which is expected)
+        try:
+            await daemon.run()
+        except (ConnectionError, AttributeError):
+            pass  # Expected - daemon stops at mocked connection failure
+
+        # Verify: Thread mapper was initialized and mappings were loaded
+        loaded_mappings = await daemon.thread_mapper.list_all()
+        assert len(loaded_mappings) == 2, "Should have loaded 2 thread mappings"
+
+        # Verify: Logs show thread mappings loaded
+        # Check captured stdout which has the structlog output
+        captured = capsys.readouterr()
+        assert "thread_mappings_loaded" in captured.out, \
+            "Should log thread_mappings_loaded message"
+        assert "thread_count=2" in captured.out, \
+            "Should include thread_count=2 in log"
+
+        # Cleanup
+        await daemon.thread_mapper.close()
+
+
+@pytest.mark.asyncio
+async def test_daemon_start_no_thread_mappings(capsys):
+    """
+    Daemon starts successfully when thread_mappings.db is empty.
+
+    Verifies that when thread_mappings.db exists but contains no mappings,
+    the daemon:
+    1. Successfully initializes ThreadMapper
+    2. Handles empty mapping list gracefully
+    3. Logs that no mappings are configured
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Setup: Create empty thread_mappings.db
+        thread_db_path = Path(tmpdir) / "thread_mappings.db"
+        mapper = ThreadMapper(str(thread_db_path))
+        await mapper.initialize()
+        await mapper.close()
+
+        # Create daemon with this empty database
+        daemon = ServiceDaemon()
+        daemon.thread_mapper = ThreadMapper(str(thread_db_path))
+
+        # Mock dependencies to prevent actual connections
+        daemon.signal_client = AsyncMock()
+        daemon.signal_client.connect = AsyncMock(side_effect=ConnectionError("Mock stop"))
+        daemon.signal_client.api_url = "ws://mock:8080"
+        daemon.session_manager = AsyncMock()
+        daemon.session_manager.initialize = AsyncMock()
+        daemon.session_manager.close = AsyncMock()
+        daemon.crash_recovery = AsyncMock()
+        daemon.crash_recovery.recover = AsyncMock(return_value=[])
+
+        # Mock health server to prevent port conflicts
+        daemon._start_health_server = AsyncMock()
+        daemon._stop_health_server = AsyncMock()
+
+        # Run daemon briefly (will fail at signal_client.connect, which is expected)
+        try:
+            await daemon.run()
+        except (ConnectionError, AttributeError):
+            pass  # Expected - daemon stops at mocked connection failure
+
+        # Verify: Thread mapper returns empty list
+        loaded_mappings = await daemon.thread_mapper.list_all()
+        assert len(loaded_mappings) == 0, "Should have no thread mappings"
+
+        # Verify: Logs show no thread mappings configured
+        captured = capsys.readouterr()
+        assert "no_thread_mappings_configured" in captured.out, \
+            "Should log no_thread_mappings_configured message"
+
+        # Cleanup
+        await daemon.thread_mapper.close()
+
+
+@pytest.mark.asyncio
+async def test_daemon_start_creates_thread_mappings_db(capsys):
+    """
+    Daemon creates thread_mappings.db on first start.
+
+    Verifies that when thread_mappings.db doesn't exist,
+    the daemon:
+    1. Successfully creates the database file
+    2. Initializes the schema
+    3. Works correctly with empty mappings
+    4. Logs no mappings configured
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Setup: Ensure thread_mappings.db doesn't exist
+        thread_db_path = Path(tmpdir) / "thread_mappings.db"
+        assert not thread_db_path.exists(), "Database should not exist yet"
+
+        # Create daemon with non-existent database path
+        daemon = ServiceDaemon()
+        daemon.thread_mapper = ThreadMapper(str(thread_db_path))
+
+        # Mock dependencies to prevent actual connections
+        daemon.signal_client = AsyncMock()
+        daemon.signal_client.connect = AsyncMock(side_effect=ConnectionError("Mock stop"))
+        daemon.signal_client.api_url = "ws://mock:8080"
+        daemon.session_manager = AsyncMock()
+        daemon.session_manager.initialize = AsyncMock()
+        daemon.session_manager.close = AsyncMock()
+        daemon.crash_recovery = AsyncMock()
+        daemon.crash_recovery.recover = AsyncMock(return_value=[])
+
+        # Mock health server to prevent port conflicts
+        daemon._start_health_server = AsyncMock()
+        daemon._stop_health_server = AsyncMock()
+
+        # Run daemon briefly (will fail at signal_client.connect, which is expected)
+        try:
+            await daemon.run()
+        except (ConnectionError, AttributeError):
+            pass  # Expected - daemon stops at mocked connection failure
+
+        # Verify: Database file was created
+        assert thread_db_path.exists(), "Database file should have been created"
+
+        # Verify: Thread mapper works (returns empty list)
+        loaded_mappings = await daemon.thread_mapper.list_all()
+        assert len(loaded_mappings) == 0, "Should have no thread mappings in new database"
+
+        # Verify: Logs show no thread mappings configured
+        captured = capsys.readouterr()
+        assert "no_thread_mappings_configured" in captured.out, \
+            "Should log no_thread_mappings_configured message"
+
+        # Cleanup
+        await daemon.thread_mapper.close()
