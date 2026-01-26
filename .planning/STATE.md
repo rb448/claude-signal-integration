@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 4 of 10 (Multi-Project Support)
-Plan: 3 of 4 in phase (in progress)
-Status: In progress
-Last activity: 2026-01-26 — Completed 04-03-PLAN.md (Thread Management Integration)
+Plan: 4 of 4 in phase (complete)
+Status: Phase complete
+Last activity: 2026-01-26 — Completed 04-04-PLAN.md (Session Creation with Thread Mappings)
 
-Progress: ███░░░░░░░ 75% (Phase 4: 3/4 plans complete)
+Progress: ████░░░░░░ 100% (Phase 4: 4/4 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
-- Average duration: 3.4 min
-- Total execution time: 1.3 hours
+- Total plans completed: 20
+- Average duration: 3.5 min
+- Total execution time: 1.4 hours (84 min)
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: ███░░░░░░░ 75% (Phase 4: 3/4 plans complete)
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
 | 2 - Session Management | 7/7 | 19min | 2.7min |
 | 3 - Claude Integration | 5/5 | 15.5min | 3.1min |
-| 4 - Multi-Project Support | 3/4 | 8.4min | 2.8min |
+| 4 - Multi-Project Support | 4/4 | 14.6min | 3.65min |
 
 **Recent Trend:**
-- Last 5 plans: 5min (03-04), 2min (03-05), 2min (04-01), 2.75min (04-02), 3.7min (04-03)
-- Trend: Phase 4 averaging 2.8min per plan - excellent velocity maintained
+- Last 5 plans: 2min (03-05), 2min (04-01), 2.75min (04-02), 3.7min (04-03), 6.2min (04-04)
+- Trend: Phase 4 complete at 3.65min average - slight increase due to comprehensive testing
 
 ## Accumulated Context
 
@@ -113,6 +113,10 @@ Recent decisions affecting current work:
 | SessionCommands.thread_commands as optional parameter | 04-03 | Follow orchestrator pattern - backwards compatible, testable | Works without thread_commands (graceful degradation) |
 | Thread commands wired via property assignment | 04-03 | SessionCommands created before ThreadCommands exists | Flexible wiring after both components initialized |
 | thread_mappings.db in Application Support | 04-03 | Follow sessions.db pattern for consistent data directory | macOS standard location, user-friendly path |
+| Use mapped project_path when available, fall back to explicit path for backward compatibility | 04-04 | Provides best UX for mapped threads while maintaining compatibility | Users can start sessions without specifying path when thread is mapped |
+| Mapped threads ignore explicit path arguments (mapping has priority) | 04-04 | Prevents confusion where user provides path but system uses different mapped path | Mapping always wins, explicit path argument ignored if mapping exists |
+| Unmapped threads without explicit path return helpful error with both options | 04-04 | Guide users to either map the thread or provide explicit path | Clear path forward for users, reduces support questions |
+| ThreadMapper passed as optional parameter to SessionCommands for graceful degradation | 04-04 | System should work without thread mapper for testing and backward compatibility | SessionCommands works with or without thread mapping feature |
 
 ### Pending Todos
 
@@ -125,5 +129,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 04-03-PLAN.md (Thread Management Integration) - Phase 4 75% complete (3/4 plans)
+Stopped at: Completed 04-04-PLAN.md (Session Creation with Thread Mappings) - Phase 4 complete (4/4 plans)
 Resume file: None
