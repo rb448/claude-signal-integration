@@ -1,11 +1,14 @@
 """ClaudeOrchestrator coordinates command flow from Signal to Claude CLI and back."""
 
 import asyncio
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
 
 from .bridge import CLIBridge
-from .parser import OutputParser
+from .parser import OutputParser, OutputType
 from .responder import SignalResponder, MessageBatcher
+
+if TYPE_CHECKING:
+    from src.approval.workflow import ApprovalWorkflow
 
 
 class ClaudeOrchestrator:
@@ -28,6 +31,7 @@ class ClaudeOrchestrator:
         parser: OutputParser,
         responder: SignalResponder,
         send_signal: Callable[[str, str], asyncio.Future],
+        approval_workflow: Optional["ApprovalWorkflow"] = None,
     ):
         """
         Initialize ClaudeOrchestrator.
@@ -37,11 +41,13 @@ class ClaudeOrchestrator:
             parser: OutputParser for parsing CLI output
             responder: SignalResponder for formatting messages
             send_signal: Async callback to send Signal messages (recipient, message)
+            approval_workflow: Optional ApprovalWorkflow for operation approval
         """
         self.bridge = bridge
         self.parser = parser
         self.responder = responder
         self.send_signal = send_signal
+        self.approval_workflow = approval_workflow
         self.session_id: Optional[str] = None
 
     async def execute_command(self, command: str, session_id: str) -> None:
@@ -80,6 +86,33 @@ class ClaudeOrchestrator:
             async for line in self.bridge.read_response():
                 # Parse line into structured event
                 parsed = self.parser.parse(line)
+
+                # Check if this is a tool call requiring approval
+                if parsed.type == OutputType.TOOL_CALL and self.approval_workflow:
+                    approved, request_id = self.approval_workflow.intercept(parsed)
+
+                    if not approved:
+                        # Operation requires approval - notify user
+                        _, reason = self.approval_workflow.detector.classify(parsed)
+                        approval_msg = self.approval_workflow.format_approval_message(
+                            parsed, reason, request_id
+                        )
+                        await self._send_message(approval_msg)
+
+                        # Wait for user approval
+                        is_approved = await self.approval_workflow.wait_for_approval(
+                            request_id
+                        )
+
+                        if not is_approved:
+                            # Rejected or timed out - skip operation
+                            rejection_msg = f"❌ Operation rejected or timed out - skipping {parsed.tool}"
+                            await self._send_message(rejection_msg)
+                            continue
+
+                        # Approved - notify and proceed
+                        approval_msg = f"✅ Operation approved - executing {parsed.tool}"
+                        await self._send_message(approval_msg)
 
                 # Format for Signal display
                 formatted = self.responder.format(parsed)
@@ -125,3 +158,29 @@ class ClaudeOrchestrator:
             # send_signal expects (recipient, message)
             # For now, we'll use session_id as recipient (daemon will map to thread)
             await self.send_signal(self.session_id, message)
+
+    def approve_operation(self, request_id: str) -> None:
+        """
+        Approve an operation approval request.
+
+        Args:
+            request_id: ID of approval request to approve
+
+        Raises:
+            KeyError: If request_id does not exist
+        """
+        if self.approval_workflow:
+            self.approval_workflow.manager.approve(request_id)
+
+    def reject_operation(self, request_id: str) -> None:
+        """
+        Reject an operation approval request.
+
+        Args:
+            request_id: ID of approval request to reject
+
+        Raises:
+            KeyError: If request_id does not exist
+        """
+        if self.approval_workflow:
+            self.approval_workflow.manager.reject(request_id)
