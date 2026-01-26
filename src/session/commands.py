@@ -56,7 +56,7 @@ class SessionCommands:
 
     async def handle(self, thread_id: str, message: str) -> str:
         """
-        Handle /session command, /thread command, approval command, or Claude command.
+        Handle /session command, /thread command, /code command, approval command, or Claude command.
 
         Args:
             thread_id: Signal thread ID for this command
@@ -77,6 +77,8 @@ class SessionCommands:
                 return await self.thread_commands.handle(thread_id, message)
             else:
                 return "Thread management not available."
+        elif message.strip().startswith("/code"):
+            return await self._handle_code_command(message, thread_id)
         elif message.strip().startswith("/session"):
             return await self._handle_session_command(thread_id, message)
         else:
@@ -113,6 +115,65 @@ class SessionCommands:
             return await self._stop(thread_id, session_id)
         else:
             return self._help()
+
+    async def _handle_code_command(self, message: str, recipient: str) -> str:
+        """
+        Handle /code command for code display control.
+
+        Args:
+            message: Full message text starting with /code
+            recipient: Signal thread ID (for future session context lookup)
+
+        Returns:
+            Response message to send back to user
+        """
+        parts = message.split(maxsplit=1)
+        subcommand = parts[1] if len(parts) > 1 else ""
+
+        if subcommand == "full":
+            return await self._code_full(recipient)
+        elif subcommand == "help" or subcommand == "":
+            return self._code_help()
+        else:
+            return f"Unknown subcommand: /code {subcommand}\n\nUse /code help for usage."
+
+    async def _code_full(self, recipient: str) -> str:
+        """
+        Display last code output without truncation.
+
+        Args:
+            recipient: Signal thread ID
+
+        Returns:
+            Full code view or placeholder message
+        """
+        # TODO: Store last code output in session context
+        # Full implementation requires ClaudeOrchestrator changes
+        # Deferred to Phase 7 (Connection Resilience) which includes session state sync
+        return "Full code view not yet implemented - coming in next iteration"
+
+    def _code_help(self) -> str:
+        """
+        Show /code command help.
+
+        Returns:
+            Help text for code display commands
+        """
+        return """**Code Display Commands**
+
+/code full - Show full code view (no truncation)
+  • Diffs: All context shown (no collapse)
+  • Long files: Sent as attachment
+  • Recent: Last code from Claude
+
+/code help - Show this help
+
+**Automatic Display:**
+• Code <20 lines: Inline with formatting
+• Code 20-100 lines: Inline (use /code full for details)
+• Code >100 lines: Attachment
+• Diffs: Summary + rendered changes
+"""
 
     async def _handle_claude_command(self, thread_id: str, message: str) -> str:
         """
@@ -326,6 +387,13 @@ class SessionCommands:
         if self.thread_commands:
             help_text += "Thread Commands:\n"
             help_text += "  /thread help - Show thread mapping commands\n\n"
+
+        # Add code display commands
+        help_text += """Code Display Commands:
+  /code help - Show code display commands
+  /code full - Show full code view
+
+"""
 
         # Add session commands
         help_text += """Session Commands:
