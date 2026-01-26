@@ -168,11 +168,15 @@ class ServiceDaemon:
                     count=len(recovered),
                     session_ids=recovered
                 )
-                # TODO: Send Signal notification to authorized user about recovered sessions
-                # await self.signal_client.send_message(
-                #     self.phone_verifier.authorized_number,
-                #     f"⚠️ Recovered {len(recovered)} sessions after restart"
-                # )
+                # Send Signal notification to authorized user about recovered sessions
+                try:
+                    session_ids_str = ', '.join(r[:8] for r in recovered)
+                    await self.signal_client.send_message(
+                        self.phone_verifier.authorized_number,
+                        f"⚠️ Recovered {len(recovered)} sessions after restart: {session_ids_str}"
+                    )
+                except Exception as e:
+                    logger.error("send_recovery_notification_failed", error=str(e))
 
             # Start health check endpoint
             await self._start_health_server()
