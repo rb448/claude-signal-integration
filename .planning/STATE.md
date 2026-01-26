@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 4 of 10 (Multi-Project Support)
-Plan: 4 of 4 in phase (complete)
+Plan: 5 of 5 in phase (complete)
 Status: Phase complete
-Last activity: 2026-01-26 — Completed 04-04-PLAN.md (Session Creation with Thread Mappings)
+Last activity: 2026-01-26 — Completed 04-05-PLAN.md (Daemon Startup Persistence)
 
-Progress: ████░░░░░░ 100% (Phase 4: 4/4 plans complete)
+Progress: █████░░░░░ 100% (Phase 4: 5/5 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
-- Average duration: 3.5 min
-- Total execution time: 1.4 hours (84 min)
+- Total plans completed: 21
+- Average duration: 3.6 min
+- Total execution time: 1.5 hours (91 min)
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: ████░░░░░░ 100% (Phase 4: 4/4 plans complete)
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
 | 2 - Session Management | 7/7 | 19min | 2.7min |
 | 3 - Claude Integration | 5/5 | 15.5min | 3.1min |
-| 4 - Multi-Project Support | 4/4 | 14.6min | 3.65min |
+| 4 - Multi-Project Support | 5/5 | 21.6min | 4.3min |
 
 **Recent Trend:**
-- Last 5 plans: 2min (03-05), 2min (04-01), 2.75min (04-02), 3.7min (04-03), 6.2min (04-04)
-- Trend: Phase 4 complete at 3.65min average - slight increase due to comprehensive testing
+- Last 5 plans: 2min (04-01), 2.75min (04-02), 3.7min (04-03), 6.2min (04-04), 7min (04-05)
+- Trend: Phase 4 complete at 4.3min average - comprehensive testing and startup integration
 
 ## Accumulated Context
 
@@ -117,6 +117,9 @@ Recent decisions affecting current work:
 | Mapped threads ignore explicit path arguments (mapping has priority) | 04-04 | Prevents confusion where user provides path but system uses different mapped path | Mapping always wins, explicit path argument ignored if mapping exists |
 | Unmapped threads without explicit path return helpful error with both options | 04-04 | Guide users to either map the thread or provide explicit path | Clear path forward for users, reduces support questions |
 | ThreadMapper passed as optional parameter to SessionCommands for graceful degradation | 04-04 | System should work without thread mapper for testing and backward compatibility | SessionCommands works with or without thread mapping feature |
+| Log thread mapping count on daemon startup | 04-05 | Provides visibility into mapping state | Users can verify mappings loaded, debugging startup issues easier |
+| Use capsys fixture for structlog output verification | 04-05 | structlog writes to stdout, not Python logging system | Tests correctly capture and verify log messages |
+| Mock health server in daemon tests | 04-05 | Prevents port 8081 conflicts in concurrent/consecutive test runs | Tests run reliably without port binding errors |
 
 ### Pending Todos
 
@@ -129,5 +132,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 04-04-PLAN.md (Session Creation with Thread Mappings) - Phase 4 complete (4/4 plans)
+Stopped at: Completed 04-05-PLAN.md (Daemon Startup Persistence) - Phase 4 complete (5/5 plans)
 Resume file: None
