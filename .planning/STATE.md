@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 3 of 10 (Claude Code Integration)
-Plan: 3 of 3 in phase (completed)
+Plan: 4 of 4 in phase (completed)
 Status: Phase complete
-Last activity: 2026-01-26 — Completed 03-03-PLAN.md (Signal Responder)
+Last activity: 2026-01-26 — Completed 03-04-PLAN.md (Command Orchestration)
 
-Progress: █████████░ 100% (Phase 3: 3/3 plans complete)
+Progress: █████████░ 100% (Phase 3: 4/4 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 3.8 min
-- Total execution time: 0.9 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: █████████░ 100% (Phase 3: 3/3 plans complete)
 |-------|-------|-------|----------|
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
 | 2 - Session Management | 7/7 | 19min | 2.7min |
-| 3 - Claude Integration | 3/3 | 8.5min | 2.8min |
+| 3 - Claude Integration | 4/4 | 13.5min | 3.4min |
 
 **Recent Trend:**
-- Last 5 plans: 1min (02-06), 2min (02-07), 2min (03-01), 3min (03-02), 3.5min (03-03)
-- Trend: Excellent velocity maintained - Phase 3 complete with 2.8min/plan average
+- Last 5 plans: 2min (02-07), 2min (03-01), 3min (03-02), 3.5min (03-03), 5min (03-04)
+- Trend: Excellent velocity maintained - Phase 3 complete with 3.4min/plan average
 
 ## Accumulated Context
 
@@ -91,6 +91,11 @@ Recent decisions affecting current work:
 | 0.5s minimum batch interval | 03-03 | Prevents Signal flooding while maintaining responsiveness | Balances UX smoothness with API courtesy |
 | Sentence boundary splitting | 03-03 | Split on . ! ? or \n\n in last 30% of chunk | Readability over hard character cuts |
 | Code block preservation | 03-03 | Small blocks stay intact, split before large blocks | Prevents breaking syntax-highlighted code |
+| ClaudeOrchestrator as central coordinator | 03-04 | Single component coordinates bridge, parser, responder, Signal callback | Clean separation of concerns, easy to test, single point for error handling |
+| 0.5s batch interval for message sending | 03-04 | Balances responsive user experience with Signal API courtesy | User sees updates quickly but Signal not flooded with individual messages |
+| SessionCommands routes all messages | 03-04 | Single entry point determines /session vs Claude command routing | Daemon simplified, routing logic centralized |
+| Thread-to-session mapping | 03-04 | Track which Signal thread has which active session | Enables stateful conversations - user doesn't need to specify session ID with every command |
+| None response signals orchestrator streaming | 03-04 | Distinguish immediate responses (/session commands) from async streaming (Claude commands) | Daemon knows when to send response vs when orchestrator handles it |
 
 ### Pending Todos
 
@@ -103,5 +108,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 03-03-PLAN.md (Signal Responder) - Phase 3 complete (3/3 plans)
+Stopped at: Completed 03-04-PLAN.md (Command Orchestration) - Phase 3 complete (4/4 plans)
 Resume file: None
