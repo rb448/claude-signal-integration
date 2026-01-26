@@ -218,6 +218,12 @@ class ServiceDaemon:
             # Wire thread commands into session commands
             self.session_commands.thread_commands = self.thread_commands
 
+            # Approval commands (no async init needed)
+            approval_commands = ApprovalCommands(manager=self.approval_manager)
+
+            # Wire approval commands into session commands
+            self.session_commands.approval_commands = approval_commands
+
             # Run crash recovery
             recovered = await self.crash_recovery.recover()
             if recovered:
