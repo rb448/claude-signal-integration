@@ -10,6 +10,7 @@ Each session spawns an isolated Claude Code subprocess with:
 import asyncio
 import structlog
 from typing import Optional
+from src.claude.bridge import CLIBridge
 
 logger = structlog.get_logger(__name__)
 
@@ -36,6 +37,7 @@ class ClaudeProcess:
         self.session_id = session_id
         self.project_path = project_path
         self._process: Optional[asyncio.subprocess.Process] = None
+        self._bridge: Optional[CLIBridge] = None
         self._log = logger.bind(session_id=session_id, project_path=project_path)
 
     async def start(self, conversation_history: Optional[dict] = None) -> None:
@@ -73,9 +75,13 @@ class ClaudeProcess:
             "claude-code",
             "--no-browser",
             cwd=self.project_path,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
+
+        # Create CLIBridge for stdin/stdout communication
+        self._bridge = CLIBridge(self._process)
 
         self._log.info("claude_process_started", pid=self._process.pid)
 
@@ -127,3 +133,20 @@ class ClaudeProcess:
             return False
 
         return self._process.returncode is None
+
+    def get_bridge(self) -> CLIBridge:
+        """
+        Get CLIBridge for stdin/stdout communication with Claude Code CLI.
+
+        Returns:
+            CLIBridge instance for command/response I/O
+
+        Raises:
+            RuntimeError: If process not started yet
+        """
+        if self._bridge is None:
+            raise RuntimeError(
+                f"Bridge not available - process not started for session {self.session_id}"
+            )
+
+        return self._bridge
