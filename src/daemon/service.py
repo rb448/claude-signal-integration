@@ -29,13 +29,21 @@ class ServiceDaemon:
     Handles graceful shutdown on SIGTERM/SIGINT.
     """
 
-    def __init__(self, signal_api_url: str = "ws://localhost:8080") -> None:
+    def __init__(
+        self,
+        signal_api_url: str = "http://localhost:8080",
+        signal_phone_number: str = "+19735258994"
+    ) -> None:
         """Initialize service daemon.
 
         Args:
-            signal_api_url: WebSocket URL for signal-cli-rest-api
+            signal_api_url: HTTP URL for signal-cli-rest-api
+            signal_phone_number: Bot's registered Signal phone number
         """
-        self.signal_client = SignalClient(api_url=signal_api_url)
+        self.signal_client = SignalClient(
+            api_url=signal_api_url,
+            phone_number=signal_phone_number
+        )
         self.message_queue = MessageQueue()
         self.phone_verifier = PhoneVerifier()
         self._shutdown_event = asyncio.Event()
@@ -129,9 +137,11 @@ class ServiceDaemon:
             message: Message data to process
         """
         # Extract sender phone number and message text from message
-        # Message format depends on signal-cli-rest-api protocol
-        sender = message.get("sender", message.get("source", ""))
-        text = message.get("message", message.get("text", ""))
+        # Message format from signal-cli-rest-api: {"envelope": {"sourceNumber": "...", "dataMessage": {"message": "..."}}}
+        envelope = message.get("envelope", {})
+        sender = envelope.get("sourceNumber", envelope.get("source", ""))
+        data_message = envelope.get("dataMessage", {})
+        text = data_message.get("message", "")
         thread_id = message.get("thread_id", sender)  # Use sender as thread_id if not provided
 
         # Verify sender is authorized
@@ -236,10 +246,13 @@ class ServiceDaemon:
                 try:
                     async for message in self.signal_client.receive_messages():
                         await self.message_queue.put(message)
+                        envelope = message.get("envelope", {})
+                        sender = envelope.get("sourceNumber", envelope.get("source"))
+                        timestamp = envelope.get("timestamp")
                         logger.info(
                             "message_received_enqueued",
-                            sender=message.get("source"),
-                            timestamp=message.get("timestamp")
+                            sender=sender,
+                            timestamp=timestamp
                         )
                 except Exception as e:
                     logger.error("receive_loop_error", error=str(e))
@@ -299,7 +312,20 @@ def main() -> None:
         cache_logger_on_first_use=True,
     )
 
-    daemon = ServiceDaemon()
+    # Load configuration from config/daemon.json
+    import json
+    from pathlib import Path
+    config_path = Path(__file__).parent.parent.parent / "config" / "daemon.json"
+
+    try:
+        with open(config_path) as f:
+            config = json.load(f)
+        signal_api_url = config.get("signal_api_url", "ws://localhost:8080")
+    except Exception as e:
+        logger.warning("config_load_failed", error=str(e), using_default=True)
+        signal_api_url = "ws://localhost:8080"
+
+    daemon = ServiceDaemon(signal_api_url=signal_api_url)
 
     try:
         asyncio.run(daemon.run())
