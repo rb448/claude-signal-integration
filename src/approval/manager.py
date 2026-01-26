@@ -142,3 +142,17 @@ class ApprovalManager:
             request for request in self._requests.values()
             if request.state == ApprovalState.PENDING
         ]
+
+    def approve_all(self) -> int:
+        """
+        Approve all pending requests.
+
+        Returns:
+            Count of approvals that were approved
+        """
+        pending = self.list_pending()
+
+        for request in pending:
+            self.approve(request.id)
+
+        return len(pending)

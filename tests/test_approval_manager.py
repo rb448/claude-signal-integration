@@ -218,3 +218,72 @@ class TestApprovalRequestTracking:
         assert len(pending) == 1
         assert pending[0].id == req3.id
         assert pending[0].state == ApprovalState.PENDING
+
+
+class TestApprovalBatchOperations:
+    """Test batch approval operations"""
+
+    def test_approve_all_with_empty_pending_returns_zero(self):
+        """approve_all() with no pending requests returns 0"""
+        manager = ApprovalManager()
+
+        count = manager.approve_all()
+
+        assert count == 0
+
+    def test_approve_all_approves_multiple_pending(self):
+        """approve_all() approves all pending requests and returns count"""
+        manager = ApprovalManager()
+
+        # Create 3 pending requests
+        req1 = manager.request({"tool": "Edit"}, reason="File 1")
+        req2 = manager.request({"tool": "Write"}, reason="File 2")
+        req3 = manager.request({"tool": "Bash"}, reason="Command")
+
+        count = manager.approve_all()
+
+        assert count == 3
+        assert manager.get(req1.id).state == ApprovalState.APPROVED
+        assert manager.get(req2.id).state == ApprovalState.APPROVED
+        assert manager.get(req3.id).state == ApprovalState.APPROVED
+
+    def test_approve_all_skips_non_pending(self):
+        """approve_all() only approves PENDING, skips other states"""
+        manager = ApprovalManager()
+
+        # Create 3 requests, approve one, reject another
+        req1 = manager.request({"tool": "Edit"}, reason="File 1")
+        req2 = manager.request({"tool": "Write"}, reason="File 2")
+        req3 = manager.request({"tool": "Bash"}, reason="Command")
+
+        manager.approve(req1.id)
+        manager.reject(req2.id)
+
+        count = manager.approve_all()
+
+        # Should only count the one pending request
+        assert count == 1
+        assert manager.get(req1.id).state == ApprovalState.APPROVED  # unchanged
+        assert manager.get(req2.id).state == ApprovalState.REJECTED  # unchanged
+        assert manager.get(req3.id).state == ApprovalState.APPROVED  # newly approved
+
+    def test_approve_all_uses_list_pending_internally(self):
+        """approve_all() uses existing list_pending() method"""
+        manager = ApprovalManager()
+
+        # Create 3 requests, approve one, reject another
+        req1 = manager.request({"tool": "Edit"}, reason="File 1")
+        req2 = manager.request({"tool": "Write"}, reason="File 2")
+        req3 = manager.request({"tool": "Bash"}, reason="Command")
+
+        manager.approve(req1.id)
+        manager.reject(req2.id)
+
+        # Verify list_pending shows only the one pending
+        pending = manager.list_pending()
+        assert len(pending) == 1
+        assert pending[0].id == req3.id
+
+        # approve_all should approve just that one
+        count = manager.approve_all()
+        assert count == 1
