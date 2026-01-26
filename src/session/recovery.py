@@ -72,23 +72,21 @@ class CrashRecovery:
             return []
 
         recovered_ids = []
+        recovery_time = datetime.now(UTC).isoformat()
 
         for session in crashed_sessions:
-            # Add recovered_at timestamp to context
-            recovery_time = datetime.now(UTC).isoformat()
-            updated_context = {**session.context, "recovered_at": recovery_time}
-
-            # Update context first (preserves existing data)
-            await self.session_manager.update(
-                session_id=session.id,
-                context=updated_context
-            )
-
-            # Transition ACTIVE → PAUSED
+            # Transition ACTIVE → PAUSED (validates state machine rules)
             await self.session_lifecycle.transition(
                 session_id=session.id,
                 from_status=SessionStatus.ACTIVE,
                 to_status=SessionStatus.PAUSED
+            )
+
+            # Add recovered_at timestamp to context (preserves existing data)
+            updated_context = {**session.context, "recovered_at": recovery_time}
+            await self.session_manager.update(
+                session_id=session.id,
+                context=updated_context
             )
 
             recovered_ids.append(session.id)
