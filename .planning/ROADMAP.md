@@ -84,10 +84,17 @@ Plans:
     6. Implement subprocess management to pass tests
 **Research**: Likely (durable execution framework evaluation needed)
 **Research topics**: Temporal vs Restate vs DBOS comparison, SQLite atomic write patterns, subprocess management for process isolation
-**Plans**: TBD
+**Plans**: 7 plans (5 initial + 2 gap closure)
+**Completed**: 2026-01-26
 
 Plans:
-- [ ] 02-01: TBD during phase planning
+- [x] 02-01: Session persistence (SQLite schema + SessionManager CRUD)
+- [x] 02-02: Session lifecycle state machine
+- [x] 02-03: Process isolation (ClaudeProcess subprocess management)
+- [x] 02-04: Crash recovery (CrashRecovery.recover() on startup)
+- [x] 02-05: Session commands integration (/session start/list/resume/stop/help)
+- [x] 02-06: Wire session command responses to Signal (gap closure)
+- [x] 02-07: Conversation history restoration infrastructure (gap closure)
 
 ### Phase 3: Claude Code Integration & Command Parity
 **Goal**: Full Claude Code command set accessible via Signal
@@ -405,8 +412,8 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Infrastructure | 0/TBD | Not started | - |
-| 2. Session Management | 0/TBD | Not started | - |
+| 1. Core Infrastructure | 4/4 | Complete | 2026-01-25 |
+| 2. Session Management | 7/7 | Complete | 2026-01-26 |
 | 3. Claude Integration | 0/TBD | Not started | - |
 | 4. Multi-Project | 0/TBD | Not started | - |
 | 5. Permissions | 0/TBD | Not started | - |
