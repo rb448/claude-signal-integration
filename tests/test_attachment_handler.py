@@ -333,3 +333,215 @@ class TestAttachmentHandler:
 
             # Should handle special chars
             assert result == "123456789"
+
+
+class TestAttachmentValidation:
+    """Test attachment size limits and validation."""
+
+    @pytest.mark.asyncio
+    async def test_rejects_files_over_100mb(self):
+        """Test that files over 100MB are rejected."""
+        handler = AttachmentHandler(signal_api_url="http://localhost:8080")
+
+        # Create code larger than 100MB
+        large_code = "x" * (101 * 1024 * 1024)
+
+        result = await handler.send_code_file(
+            recipient="+12345678900",
+            code=large_code,
+            filename="huge.py"
+        )
+
+        # Should reject and return None
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_warns_for_files_over_10mb(self, capsys):
+        """Test that files over 10MB trigger a warning."""
+        handler = AttachmentHandler(signal_api_url="http://localhost:8080")
+
+        # Create code larger than 10MB but under 100MB
+        large_code = "x" * (11 * 1024 * 1024)
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
+
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
+
+            result = await handler.send_code_file(
+                recipient="+12345678900",
+                code=large_code,
+                filename="large.py"
+            )
+
+            # Should still upload
+            assert result == "123456789"
+
+            # Should have logged warning (captured by structlog)
+            captured = capsys.readouterr()
+            assert "large" in captured.out.lower() or "warning" in captured.out.lower()
+
+    @pytest.mark.asyncio
+    async def test_sanitizes_filename_with_special_chars(self):
+        """Test that filenames with special characters are sanitized."""
+        handler = AttachmentHandler(signal_api_url="http://localhost:8080")
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
+
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
+
+            result = await handler.send_code_file(
+                recipient="+12345678900",
+                code="test",
+                filename="../../../etc/passwd"  # Path traversal attempt
+            )
+
+            # Should still upload (with sanitized filename)
+            assert result == "123456789"
+
+            # Verify sanitized filename was used
+            call_args = mock_session.post.call_args
+            json_data = call_args[1]['json']
+            message = json_data.get('message', '')
+            # Should not contain path traversal
+            assert "../" not in message
+
+    @pytest.mark.asyncio
+    async def test_sanitizes_filename_removes_invalid_chars(self):
+        """Test that invalid filename characters are replaced."""
+        handler = AttachmentHandler(signal_api_url="http://localhost:8080")
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
+
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
+
+            result = await handler.send_code_file(
+                recipient="+12345678900",
+                code="test",
+                filename='bad<>:"|?*chars.py'
+            )
+
+            # Should upload with sanitized filename
+            assert result == "123456789"
+
+    @pytest.mark.asyncio
+    async def test_validates_recipient_phone_number(self):
+        """Test that invalid recipient phone numbers are rejected."""
+        handler = AttachmentHandler(signal_api_url="http://localhost:8080")
+
+        # Invalid phone numbers (not E.164 format)
+        invalid_phones = [
+            "12345678900",  # Missing +
+            "+1",  # Too short
+            "+123456789012345678",  # Too long
+            "invalid",  # Not a number
+            ""  # Empty
+        ]
+
+        for invalid_phone in invalid_phones:
+            result = await handler.send_code_file(
+                recipient=invalid_phone,
+                code="test",
+                filename="test.py"
+            )
+            # Should reject invalid phone
+            assert result is None, f"Should reject phone: {invalid_phone}"
+
+    @pytest.mark.asyncio
+    async def test_accepts_valid_e164_phone_numbers(self):
+        """Test that valid E.164 phone numbers are accepted."""
+        handler = AttachmentHandler(signal_api_url="http://localhost:8080")
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
+
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
+
+            # Valid E.164 phone numbers
+            valid_phones = [
+                "+12345678900",  # US
+                "+447911123456",  # UK
+                "+861234567890"  # China
+            ]
+
+            for valid_phone in valid_phones:
+                result = await handler.send_code_file(
+                    recipient=valid_phone,
+                    code="test",
+                    filename="test.py"
+                )
+                # Should accept valid phone
+                assert result == "123456789", f"Should accept phone: {valid_phone}"
+
+    @pytest.mark.asyncio
+    async def test_handles_empty_filename(self):
+        """Test that empty filenames are replaced with default."""
+        handler = AttachmentHandler(signal_api_url="http://localhost:8080")
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
+
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
+
+            result = await handler.send_code_file(
+                recipient="+12345678900",
+                code="test",
+                filename=""  # Empty filename
+            )
+
+            # Should upload with default filename
+            assert result == "123456789"
+
+            # Verify default filename was used
+            call_args = mock_session.post.call_args
+            json_data = call_args[1]['json']
+            message = json_data.get('message', '')
+            # Should have some default name
+            assert len(message) > 2  # More than just emoji
