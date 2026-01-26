@@ -81,7 +81,8 @@ class ServiceDaemon:
             bridge=None,  # Bridge set when session starts
             parser=self.output_parser,
             responder=self.signal_responder,
-            send_signal=self.signal_client.send_message
+            send_signal=self.signal_client.send_message,
+            approval_workflow=self.approval_workflow
         )
 
         # Session commands (thread_commands will be set in async start())
