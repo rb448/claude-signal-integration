@@ -1,0 +1,264 @@
+"""Tests for diff processing and summary generation."""
+
+import pytest
+from src.claude.diff_processor import DiffParser, SummaryGenerator, DiffHunk, FileDiff
+
+
+class TestDiffParser:
+    """Tests for DiffParser class."""
+
+    def test_parse_extracts_file_path_from_diff_header(self):
+        """DiffParser extracts file paths from git diff header."""
+        diff_text = """diff --git a/src/user.py b/src/user.py
+index 1234567..abcdefg 100644
+--- a/src/user.py
++++ b/src/user.py"""
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        assert len(result) == 1
+        assert result[0].old_path == "src/user.py"
+        assert result[0].new_path == "src/user.py"
+
+    def test_parse_identifies_hunks(self):
+        """DiffParser identifies hunks from @@ markers."""
+        diff_text = """diff --git a/src/user.py b/src/user.py
+index 1234567..abcdefg 100644
+--- a/src/user.py
++++ b/src/user.py
+@@ -10,5 +10,7 @@ class User:
+     def validate(self):
+         pass
++    def new_method(self):
++        pass"""
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        assert len(result[0].hunks) == 1
+        assert result[0].hunks[0].old_start == 10
+        assert result[0].hunks[0].old_count == 5
+        assert result[0].hunks[0].new_start == 10
+        assert result[0].hunks[0].new_count == 7
+
+    def test_parse_separates_added_and_removed_lines(self):
+        """DiffParser preserves +/- prefixes for added/removed lines."""
+        diff_text = """diff --git a/src/user.py b/src/user.py
+index 1234567..abcdefg 100644
+--- a/src/user.py
++++ b/src/user.py
+@@ -10,3 +10,4 @@ class User:
+     def validate(self):
+-        pass
++        return True
++    # New comment"""
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        lines = result[0].hunks[0].lines
+        assert "     def validate(self):" in lines
+        assert "-        pass" in lines
+        assert "+        return True" in lines
+        assert "+    # New comment" in lines
+
+    def test_parse_preserves_context_lines(self):
+        """DiffParser preserves context lines without +/- prefix."""
+        diff_text = """diff --git a/src/user.py b/src/user.py
+index 1234567..abcdefg 100644
+--- a/src/user.py
++++ b/src/user.py
+@@ -10,3 +10,3 @@ class User:
+     def validate(self):
+-        pass
++        return True"""
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        lines = result[0].hunks[0].lines
+        # Context line has no prefix
+        assert "     def validate(self):" in lines
+
+    def test_parse_handles_multiple_files(self):
+        """DiffParser handles multiple files in single diff output."""
+        diff_text = """diff --git a/src/user.py b/src/user.py
+index 1234567..abcdefg 100644
+--- a/src/user.py
++++ b/src/user.py
+@@ -10,1 +10,2 @@ class User:
++    pass
+diff --git a/src/auth.py b/src/auth.py
+index 7654321..gfedcba 100644
+--- a/src/auth.py
++++ b/src/auth.py
+@@ -5,1 +5,2 @@ def login():
++    return True"""
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        assert len(result) == 2
+        assert result[0].old_path == "src/user.py"
+        assert result[1].old_path == "src/auth.py"
+
+    def test_parse_handles_binary_files(self):
+        """DiffParser marks binary files without parsing content."""
+        diff_text = """diff --git a/image.png b/image.png
+index 1234567..abcdefg 100644
+Binary files a/image.png and b/image.png differ"""
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        assert len(result) == 1
+        assert result[0].old_path == "image.png"
+        assert result[0].is_binary is True
+        assert len(result[0].hunks) == 0
+
+    def test_parse_handles_empty_diff(self):
+        """DiffParser returns empty list for empty diff."""
+        parser = DiffParser()
+        result = parser.parse("")
+
+        assert result == []
+
+    def test_parse_handles_malformed_input(self):
+        """DiffParser gracefully handles malformed input."""
+        diff_text = "This is not a git diff"
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        # Should return empty list, not crash
+        assert result == []
+
+
+class TestSummaryGenerator:
+    """Tests for SummaryGenerator class."""
+
+    def test_generate_describes_single_file_change(self):
+        """SummaryGenerator describes single-file modification."""
+        file_diff = FileDiff(
+            old_path="src/user.py",
+            new_path="src/user.py",
+            hunks=[
+                DiffHunk(
+                    old_start=10,
+                    old_count=5,
+                    new_start=10,
+                    new_count=10,
+                    lines=[
+                        " class User:",
+                        "-    pass",
+                        "+    def validate(self):",
+                        "+        return True",
+                    ]
+                )
+            ]
+        )
+
+        generator = SummaryGenerator()
+        result = generator.generate([file_diff])
+
+        assert "Modified src/user.py" in result
+        assert "added 2 lines" in result
+        assert "removed 1 lines" in result
+
+    def test_generate_describes_multi_file_change(self):
+        """SummaryGenerator lists multiple modified files."""
+        file_diffs = [
+            FileDiff("src/user.py", "src/user.py", []),
+            FileDiff("src/auth.py", "src/auth.py", []),
+            FileDiff("src/db.py", "src/db.py", []),
+        ]
+
+        generator = SummaryGenerator()
+        result = generator.generate(file_diffs)
+
+        assert "Modified 3 files" in result
+
+    def test_generate_identifies_new_files(self):
+        """SummaryGenerator identifies newly created files."""
+        file_diff = FileDiff(
+            old_path="/dev/null",
+            new_path="config.json",
+            hunks=[
+                DiffHunk(
+                    old_start=0,
+                    old_count=0,
+                    new_start=1,
+                    new_count=20,
+                    lines=["+{"] + [f"+  line{i}" for i in range(19)]
+                )
+            ]
+        )
+
+        generator = SummaryGenerator()
+        result = generator.generate([file_diff])
+
+        assert "Created config.json" in result
+        assert "20 lines" in result
+
+    def test_generate_identifies_deleted_files(self):
+        """SummaryGenerator identifies deleted files."""
+        file_diff = FileDiff(
+            old_path="old_migration.sql",
+            new_path="/dev/null",
+            hunks=[]
+        )
+
+        generator = SummaryGenerator()
+        result = generator.generate([file_diff])
+
+        assert "Deleted old_migration.sql" in result
+
+    def test_generate_detects_function_changes(self):
+        """SummaryGenerator detects modified functions."""
+        file_diff = FileDiff(
+            old_path="src/user.py",
+            new_path="src/user.py",
+            hunks=[
+                DiffHunk(
+                    old_start=10,
+                    old_count=3,
+                    new_start=10,
+                    new_count=4,
+                    lines=[
+                        " class User:",
+                        "     def validate(self):",
+                        "-        pass",
+                        "+        return True",
+                    ]
+                )
+            ]
+        )
+
+        generator = SummaryGenerator()
+        result = generator.generate([file_diff])
+
+        assert "validate()" in result
+        assert "src/user.py" in result
+
+    def test_generate_handles_binary_files(self):
+        """SummaryGenerator describes binary file updates."""
+        file_diff = FileDiff(
+            old_path="image.png",
+            new_path="image.png",
+            hunks=[],
+            is_binary=True
+        )
+
+        generator = SummaryGenerator()
+        result = generator.generate([file_diff])
+
+        assert "Updated image.png" in result
+        assert "binary file" in result
+
+    def test_generate_handles_empty_diff(self):
+        """SummaryGenerator handles empty diff input."""
+        generator = SummaryGenerator()
+        result = generator.generate([])
+
+        assert result == "No changes detected"
