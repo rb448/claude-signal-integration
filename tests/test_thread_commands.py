@@ -71,31 +71,37 @@ async def test_thread_map_rejects_nonexistent_path(thread_commands, mock_mapper)
 
 
 @pytest.mark.asyncio
-async def test_thread_map_rejects_duplicate_thread(thread_commands, mock_mapper):
+async def test_thread_map_rejects_duplicate_thread(thread_commands, mock_mapper, tmp_path):
     """Test /thread map returns error if thread already mapped."""
-    # Setup: Mock mapper to raise error for duplicate thread
+    # Setup: Create a real directory and mock mapper to raise error for duplicate thread
+    project_path = str(tmp_path / "test-project")
+    Path(project_path).mkdir()
+
     existing_path = "/existing/project"
     mock_mapper.map.side_effect = ThreadMappingError(f"Thread already mapped to {existing_path}")
 
     # Execute
-    message = "/thread map /some/path"
+    message = f"/thread map {project_path}"
     result = await thread_commands.handle("abc123de", message)
 
     # Verify
     assert "Error" in result
     assert "already mapped" in result
-    assert existing_path in result
+    assert "unmap" in result.lower()
 
 
 @pytest.mark.asyncio
-async def test_thread_map_rejects_duplicate_path(thread_commands, mock_mapper):
+async def test_thread_map_rejects_duplicate_path(thread_commands, mock_mapper, tmp_path):
     """Test /thread map returns error if path already mapped to another thread."""
-    # Setup: Mock mapper to raise error for duplicate path
+    # Setup: Create a real directory and mock mapper to raise error for duplicate path
+    project_path = str(tmp_path / "test-project")
+    Path(project_path).mkdir()
+
     existing_thread = "xyz789ab"
     mock_mapper.map.side_effect = ThreadMappingError(f"Path already mapped to thread {existing_thread}")
 
     # Execute
-    message = "/thread map /some/path"
+    message = f"/thread map {project_path}"
     result = await thread_commands.handle("abc123de", message)
 
     # Verify
