@@ -490,3 +490,53 @@ async def test_resume_sets_orchestrator_bridge():
 
     # Verify it's the process's bridge
     assert orchestrator.bridge is mock_bridge, "orchestrator.bridge should reference process bridge"
+
+
+@pytest.mark.asyncio
+async def test_handle_routes_thread_commands():
+    """Test that handle() routes /thread commands to ThreadCommands."""
+    from src.thread import ThreadCommands
+
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+    thread_commands = AsyncMock(spec=ThreadCommands)
+
+    # Mock thread_commands.handle() to return a message
+    thread_commands.handle.return_value = "Thread command response"
+
+    # Create commands handler with thread_commands
+    commands = SessionCommands(
+        manager,
+        lifecycle,
+        process_factory,
+        thread_commands=thread_commands
+    )
+
+    # Execute /thread command
+    response = await commands.handle("thread-123", "/thread map /tmp/project")
+
+    # Verify ThreadCommands.handle() was called
+    thread_commands.handle.assert_called_once_with("thread-123", "/thread map /tmp/project")
+
+    # Verify response is from ThreadCommands
+    assert response == "Thread command response"
+
+
+@pytest.mark.asyncio
+async def test_handle_thread_commands_unavailable():
+    """Test that handle() returns error when thread_commands not provided."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    # Create commands handler WITHOUT thread_commands
+    commands = SessionCommands(manager, lifecycle, process_factory)
+
+    # Execute /thread command
+    response = await commands.handle("thread-123", "/thread map /tmp/project")
+
+    # Verify error response
+    assert "not available" in response.lower()

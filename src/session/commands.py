@@ -9,6 +9,7 @@ from typing import Callable, Optional
 from src.session import SessionManager, SessionLifecycle, SessionStatus
 from src.claude import ClaudeProcess
 from src.claude.orchestrator import ClaudeOrchestrator
+from src.thread import ThreadCommands
 
 
 class SessionCommands:
@@ -26,6 +27,7 @@ class SessionCommands:
         session_lifecycle: SessionLifecycle,
         claude_process_factory: Callable[[str, str], ClaudeProcess],
         claude_orchestrator: Optional[ClaudeOrchestrator] = None,
+        thread_commands: Optional[ThreadCommands] = None,
     ):
         """
         Initialize SessionCommands.
@@ -35,17 +37,19 @@ class SessionCommands:
             session_lifecycle: SessionLifecycle for state transitions
             claude_process_factory: Factory function to create ClaudeProcess instances
             claude_orchestrator: ClaudeOrchestrator for routing Claude commands
+            thread_commands: ThreadCommands for thread mapping operations
         """
         self.manager = session_manager
         self.lifecycle = session_lifecycle
         self.process_factory = claude_process_factory
         self.orchestrator = claude_orchestrator
+        self.thread_commands = thread_commands
         self.processes: dict[str, ClaudeProcess] = {}  # session_id -> process
         self.thread_sessions: dict[str, str] = {}  # thread_id -> session_id (active sessions)
 
     async def handle(self, thread_id: str, message: str) -> str:
         """
-        Handle /session command or Claude command.
+        Handle /session command, /thread command, or Claude command.
 
         Args:
             thread_id: Signal thread ID for this command
@@ -55,7 +59,13 @@ class SessionCommands:
             Response message to send back to user (None for Claude commands)
         """
         # Route to appropriate handler
-        if message.strip().startswith("/session"):
+        if message.strip().startswith("/thread"):
+            # Delegate to ThreadCommands
+            if self.thread_commands:
+                return await self.thread_commands.handle(thread_id, message)
+            else:
+                return "Thread management not available."
+        elif message.strip().startswith("/session"):
             return await self._handle_session_command(thread_id, message)
         else:
             return await self._handle_claude_command(thread_id, message)
