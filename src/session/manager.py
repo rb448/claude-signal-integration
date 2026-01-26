@@ -8,7 +8,7 @@ import asyncio
 import json
 import aiosqlite
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -103,7 +103,7 @@ class SessionManager:
             Session with generated UUID, CREATED status, timestamps
         """
         session_id = str(uuid4())
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         status = SessionStatus.CREATED
         context = {}
 
@@ -197,7 +197,7 @@ class SessionManager:
         Returns:
             Updated Session
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         # Build update fields dynamically
         updates = []
