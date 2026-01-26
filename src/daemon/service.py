@@ -225,6 +225,14 @@ class ServiceDaemon:
             # Wire approval commands into session commands
             self.session_commands.approval_commands = approval_commands
 
+            # Log approval system initialization
+            logger.info(
+                "approval_system_initialized",
+                safe_tools=len(self.approval_detector.SAFE_TOOLS),
+                destructive_tools=len(self.approval_detector.DESTRUCTIVE_TOOLS),
+                pending_approvals=len(self.approval_manager.list_pending())
+            )
+
             # Run crash recovery
             recovered = await self.crash_recovery.recover()
             if recovered:
