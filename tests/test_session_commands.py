@@ -70,7 +70,7 @@ async def test_start_creates_session_and_spawns_process():
 
     # Verify response
     assert "Started session" in response
-    assert "test-session-id" in response
+    assert "test-ses" in response  # Truncated session ID (first 8 chars)
     assert "/tmp/test-project" in response
 
 
@@ -233,7 +233,7 @@ async def test_resume_transitions_paused_to_active():
 
     # Verify response
     assert "Resumed session" in response
-    assert "session-1" in response
+    assert "session-" in response  # Truncated session ID (first 8 chars)
 
 
 @pytest.mark.asyncio
@@ -325,7 +325,7 @@ async def test_stop_terminates_process_and_session():
 
     # Verify response
     assert "Stopped session" in response
-    assert "session-1" in response
+    assert "session-" in response  # Truncated session ID (first 8 chars)
 
     # Verify process removed from tracking
     assert "session-1" not in commands.processes
