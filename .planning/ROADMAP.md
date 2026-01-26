@@ -4,6 +4,22 @@
 
 Build a Signal bot that provides complete mobile access to Claude Code sessions running on a desktop Mac. Journey from basic Signal daemon infrastructure through session management, Claude integration, multi-project support, permission workflows, code display, connection resilience, notifications, advanced features, and comprehensive testing.
 
+## TDD Discipline
+
+**All phases follow strict Test-Driven Development (TDD) for business logic:**
+
+- **RED-GREEN-REFACTOR cycle:** Write failing test → implement to pass → refactor if needed
+- **Test-first commit pattern:** `test(phase-plan): ...` commits before `feat(phase-plan): ...` commits
+- **TDD applies to:** Business logic, APIs, algorithms, state machines, data transformations, validators
+- **Standard implementation:** Configuration, schema definitions, UI scaffolding, infrastructure setup
+
+Each phase includes a **TDD Strategy** section specifying:
+1. Which components warrant TDD (with specific examples)
+2. Test-first execution order (numbered steps)
+3. What to build-then-test (infrastructure/config)
+
+**Verification:** Phase 10 audits all prior phases to ensure TDD discipline was maintained, retrofitting tests if gaps exist.
+
 ## Phases
 
 **Phase Numbering:**
@@ -49,6 +65,23 @@ Plans:
   3. Session state persists across bot restarts
   4. Each project runs in isolated Claude Code process
   5. System recovers session state automatically after crash
+**TDD Strategy**: Test-first for all business logic
+  - **TDD (write tests FIRST):**
+    - Session lifecycle state machine (create → active → paused → resumed → terminated)
+    - Session persistence layer (save/load from SQLite with atomic writes)
+    - Crash recovery logic (detect crash → restore state → resume from checkpoint)
+    - Process isolation (spawn subprocess → verify isolation → clean shutdown)
+  - **Standard (build then test):**
+    - SQLite schema definition
+    - Configuration file structure
+    - Subprocess scaffolding
+  - **Test-first execution order:**
+    1. Write failing tests for SessionManager.create(), .resume(), .persist()
+    2. Implement session state machine to pass tests
+    3. Write failing tests for crash detection and recovery
+    4. Implement recovery logic to pass tests
+    5. Write failing tests for process isolation
+    6. Implement subprocess management to pass tests
 **Research**: Likely (durable execution framework evaluation needed)
 **Research topics**: Temporal vs Restate vs DBOS comparison, SQLite atomic write patterns, subprocess management for process isolation
 **Plans**: TBD
@@ -67,6 +100,25 @@ Plans:
   4. Progress updates show Claude's current action
   5. Error messages display when operations fail
   6. All Claude Code commands work from Signal (command parity achieved)
+**TDD Strategy**: Test-first for command parsing and communication protocol
+  - **TDD (write tests FIRST):**
+    - Command parser (Signal message → Claude command object)
+    - Bidirectional communication protocol (command → CLI → response → Signal)
+    - Response streaming handler (chunk messages for mobile, maintain order)
+    - Tool call parser (extract Read/Edit/Write/Bash from Claude output)
+    - Error handler (CLI errors → user-friendly Signal messages)
+  - **Standard (build then test):**
+    - Initial subprocess spawn for Claude CLI
+    - Logging configuration
+  - **Test-first execution order:**
+    1. Write failing tests for CommandParser.parse(message) → command
+    2. Implement parser to pass tests (handle /command syntax, arguments)
+    3. Write failing tests for CLIBridge.execute(command) → response stream
+    4. Implement bidirectional communication to pass tests
+    5. Write failing tests for ToolCallParser.extract(output) → tool calls
+    6. Implement tool call extraction to pass tests
+    7. Write failing tests for error scenarios (timeout, crash, invalid command)
+    8. Implement error handling to pass tests
 **Research**: Unlikely (Anthropic SDK documentation comprehensive)
 **Plans**: TBD
 
@@ -83,6 +135,25 @@ Plans:
   3. User can create new project thread with directory selection
   4. User can switch between threads without losing session state
   5. Project-to-directory mappings persist across restarts
+**TDD Strategy**: Test-first for mapping and isolation logic
+  - **TDD (write tests FIRST):**
+    - Thread-to-project mapper (thread_id → project_path, bijective mapping)
+    - Context isolation verifier (thread A changes don't affect thread B)
+    - Thread state manager (create → active → paused → switch → resume)
+    - Mapping persistence (save/load mappings, survive restart)
+    - Directory validator (path exists, writable, not already mapped)
+  - **Standard (build then test):**
+    - Directory selection UI messages
+    - Initial mapping storage schema
+  - **Test-first execution order:**
+    1. Write failing tests for ThreadMapper.map(thread_id, path) → success/error
+    2. Implement mapper with validation to pass tests
+    3. Write failing tests for context isolation (parallel threads don't mix state)
+    4. Implement isolation to pass tests (separate sessions, separate state)
+    5. Write failing tests for thread switching (pause A → activate B → resume A)
+    6. Implement state manager to pass tests
+    7. Write failing tests for persistence (save → restart → load → verify)
+    8. Implement persistence to pass tests
 **Research**: Unlikely (standard process isolation patterns)
 **Plans**: TBD
 
@@ -101,6 +172,27 @@ Plans:
   5. System pauses work and notifies user on approval timeout (10 min)
   6. User can approve batch of operations with single command
   7. Approved operations execute; rejected operations skip
+**TDD Strategy**: Test-first for approval state machine and operation detection
+  - **TDD (write tests FIRST):**
+    - Operation detector (Claude tool call → destructive/safe classification)
+    - Approval state machine (pending → approved/rejected/timeout → execute/skip)
+    - Timeout handler (wait 10min → notify user → pause work)
+    - Batch approver (multiple pending → approve all → execute in order)
+    - Operation classifier rules (Edit = destructive, Read = safe, etc.)
+  - **Standard (build then test):**
+    - Push notification formatting
+    - Approval request message templates
+  - **Test-first execution order:**
+    1. Write failing tests for OperationDetector.classify(tool_call) → destructive/safe
+    2. Implement classifier with rules to pass tests
+    3. Write failing tests for ApprovalManager.request() → pending state
+    4. Implement state machine to pass tests
+    5. Write failing tests for timeout (wait → timeout → pause → notify)
+    6. Implement timeout handler to pass tests
+    7. Write failing tests for batch approval (approve_all → all execute)
+    8. Implement batch logic to pass tests
+    9. Write failing tests for edge cases (duplicate approval, reject after timeout)
+    10. Implement edge case handling to pass tests
 **Research**: Unlikely (established mobile notification patterns)
 **Plans**: TBD
 
@@ -118,6 +210,30 @@ Plans:
   4. Diffs render in readable side-by-side or overlay mode
   5. Plain-English summaries accompany code changes
   6. User can request full code view when summary insufficient
+**TDD Strategy**: Test-first for formatting and rendering algorithms
+  - **TDD (write tests FIRST):**
+    - Code formatter (raw code → mobile-optimized text, max 320px width)
+    - Length detector (code → inline/attachment decision, <20 lines vs >100 lines)
+    - Syntax highlighter (code + language → ANSI-colored text)
+    - Diff parser (git diff → structured before/after representation)
+    - Diff renderer (diff object → readable mobile format, overlay or side-by-side)
+    - Summary generator (code change → plain-English description)
+  - **Standard (build then test):**
+    - Signal attachment API integration
+    - Mobile preview generation
+  - **Test-first execution order:**
+    1. Write failing tests for CodeFormatter.format(code, width=320) → formatted
+    2. Implement formatter with line wrapping to pass tests
+    3. Write failing tests for LengthDetector.should_attach(code) → bool
+    4. Implement threshold logic to pass tests
+    5. Write failing tests for SyntaxHighlighter.highlight(code, lang) → colored
+    6. Implement highlighter to pass tests (Pygments integration)
+    7. Write failing tests for DiffParser.parse(git_diff) → diff_object
+    8. Implement parser to pass tests
+    9. Write failing tests for DiffRenderer.render(diff_object, mode) → mobile_text
+    10. Implement renderer to pass tests (handle 320px constraint)
+    11. Write failing tests for SummaryGenerator.generate(diff) → description
+    12. Implement summarizer to pass tests
 **Research**: Likely (mobile diff rendering libraries sparse, may need prototyping)
 **Research topics**: Signal attachment format limits, mobile syntax highlighting libraries (Pygments optimization), diff rendering at 320px
 **Plans**: TBD
@@ -135,6 +251,27 @@ Plans:
   3. Session state synchronizes after reconnection
   4. User sees connection status (connected/reconnecting/offline/syncing)
   5. Claude keeps working during mobile disconnect; user catches up on reconnect
+**TDD Strategy**: Test-first for reconnection logic and buffer management
+  - **TDD (write tests FIRST):**
+    - Reconnection state machine (connected → dropped → reconnecting → connected)
+    - Exponential backoff calculator (attempt 1 = 1s, attempt 2 = 2s, attempt 3 = 4s, max 60s)
+    - Message buffer (queue outgoing during disconnect, drain on reconnect)
+    - State synchronizer (diff local vs remote state → merge → notify user)
+    - Connection health monitor (ping/pong, detect stale connection)
+  - **Standard (build then test):**
+    - Connection status indicator messages
+    - Reconnection logging
+  - **Test-first execution order:**
+    1. Write failing tests for ReconnectionManager.on_disconnect() → state transition
+    2. Implement state machine to pass tests
+    3. Write failing tests for backoff calculator (attempt → delay in seconds)
+    4. Implement exponential backoff to pass tests
+    5. Write failing tests for MessageBuffer.enqueue()/dequeue() during disconnect
+    6. Implement buffer with drain-on-reconnect to pass tests
+    7. Write failing tests for StateSynchronizer.sync() → merged state
+    8. Implement sync algorithm to pass tests
+    9. Write failing tests for HealthMonitor.is_stale() → bool
+    10. Implement ping/pong to pass tests
 **Research**: Unlikely (WebSocket reconnection well-documented)
 **Plans**: TBD
 
@@ -150,6 +287,27 @@ Plans:
   2. User can configure notification preferences per project thread
   3. Notifications categorized by urgency (urgent/important/informational/silent)
   4. User can enable/disable notifications per event type (errors vs progress vs completions)
+**TDD Strategy**: Test-first for event classification and preference filtering
+  - **TDD (write tests FIRST):**
+    - Event categorizer (event → urgency level: urgent/important/informational/silent)
+    - Preference matcher (event + user prefs → send/skip notification)
+    - Per-thread preference manager (thread_id + event_type → enabled/disabled)
+    - Notification formatter (event → user-friendly message text)
+    - Priority rules (urgent always sends, silent never sends, etc.)
+  - **Standard (build then test):**
+    - Notification delivery mechanism
+    - Preference storage schema
+  - **Test-first execution order:**
+    1. Write failing tests for EventCategorizer.categorize(event) → urgency
+    2. Implement categorization rules to pass tests
+    3. Write failing tests for PreferenceMatcher.should_notify(event, prefs) → bool
+    4. Implement matcher to pass tests
+    5. Write failing tests for PreferenceManager.get/set(thread, event_type, enabled)
+    6. Implement per-thread preferences to pass tests
+    7. Write failing tests for NotificationFormatter.format(event) → message
+    8. Implement formatter to pass tests
+    9. Write failing tests for priority rules (urgent overrides user prefs, etc.)
+    10. Implement priority logic to pass tests
 **Research**: Unlikely (mobile notification best practices established)
 **Plans**: TBD
 
@@ -165,6 +323,30 @@ Plans:
   2. User can invoke custom slash commands from Signal with autocomplete
   3. User can activate emergency fix mode for production incidents
   4. Emergency mode pre-approves safe operations and auto-commits changes
+**TDD Strategy**: Test-first for sync algorithm and emergency mode rules
+  - **TDD (write tests FIRST):**
+    - Command syncer (detect new/modified/deleted commands in ~/.claude/agents/)
+    - Delta calculator (local commands vs mobile cache → add/update/remove)
+    - Emergency mode state machine (normal → emergency → auto-approve → auto-commit → normal)
+    - Safe operation classifier (emergency mode: Read/Grep safe, Edit/Write need rules)
+    - Auto-approval rules (emergency mode approves edits but not deletions/git push)
+    - Auto-commit formatter (changes → commit message with emergency flag)
+  - **Standard (build then test):**
+    - File system watcher setup
+    - Autocomplete UI formatting
+  - **Test-first execution order:**
+    1. Write failing tests for CommandSyncer.detect_changes() → added/modified/deleted
+    2. Implement file watcher to pass tests
+    3. Write failing tests for DeltaCalculator.calculate(local, remote) → delta
+    4. Implement delta logic to pass tests
+    5. Write failing tests for EmergencyMode.activate() → state transition
+    6. Implement state machine to pass tests
+    7. Write failing tests for SafeOperationClassifier.is_safe(op, emergency=True) → bool
+    8. Implement classifier with emergency rules to pass tests
+    9. Write failing tests for AutoApprovalRules.should_auto_approve(op) → bool
+    10. Implement rules to pass tests
+    11. Write failing tests for AutoCommitFormatter.format(changes) → commit_msg
+    12. Implement formatter to pass tests
 **Research**: Unlikely (custom command sync is file system operation)
 **Plans**: TBD
 
@@ -184,6 +366,32 @@ Plans:
   6. End-to-end tests validate complete user workflows (start → delegate → approve → complete)
   7. Tests run automatically in CI/CD before merges
   8. Test fixtures provide realistic Signal/Claude message payloads
+**TDD Strategy**: Validate TDD discipline from all prior phases and add missing coverage
+  - **TDD Validation (verify prior phases followed TDD):**
+    - Audit all prior phase SUMMARYs for TDD commit patterns (test → feat → refactor)
+    - Verify each business logic component has test file created BEFORE implementation
+    - Check git history shows test commits before feature commits
+    - Identify any components that skipped TDD and retrofit tests
+  - **Coverage Gaps (write tests for any missing scenarios):**
+    - Load testing (simulate 100 concurrent sessions)
+    - Chaos testing (random network drops, process kills, corrupt state files)
+    - Security testing (injection attacks, unauthorized access attempts)
+    - Performance regression tests (ensure new features don't degrade speed)
+  - **CI/CD Pipeline (build then test - infrastructure):**
+    - GitHub Actions workflow configuration
+    - Test fixtures and mocks
+    - Coverage reporting setup
+  - **Test-first execution order:**
+    1. Audit Phases 1-9 commit history for TDD compliance
+    2. Write report: which components followed TDD, which didn't
+    3. For non-TDD components: write missing unit tests (retroactive TDD)
+    4. Write failing load tests (100 concurrent sessions)
+    5. Optimize code to pass load tests
+    6. Write failing chaos tests (random failures, corrupt state)
+    7. Harden code to pass chaos tests
+    8. Write failing security tests (injection, auth bypass)
+    9. Secure code to pass security tests
+    10. Set up CI/CD pipeline with all tests
 **Research**: Unlikely (Python testing patterns well-established)
 **Plans**: TBD
 
