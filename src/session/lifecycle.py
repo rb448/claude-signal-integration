@@ -1,7 +1,7 @@
 """
 Session Lifecycle - State machine for session transitions.
 
-GREEN Phase: Implementation to make tests pass.
+Enforces valid state transitions and prevents invalid lifecycle changes.
 """
 
 from typing import TYPE_CHECKING
@@ -18,24 +18,24 @@ class StateTransitionError(Exception):
 
 
 # Valid state transition rules
-# Key: (from_state, to_state) → bool
+# Set of (from_state, to_state) tuples representing allowed transitions
 VALID_TRANSITIONS = {
     # From CREATED
-    (SessionStatus.CREATED, SessionStatus.ACTIVE): True,
-    (SessionStatus.CREATED, SessionStatus.TERMINATED): True,
+    (SessionStatus.CREATED, SessionStatus.ACTIVE),
+    (SessionStatus.CREATED, SessionStatus.TERMINATED),
 
     # From ACTIVE
-    (SessionStatus.ACTIVE, SessionStatus.ACTIVE): True,  # Idempotent
-    (SessionStatus.ACTIVE, SessionStatus.PAUSED): True,
-    (SessionStatus.ACTIVE, SessionStatus.TERMINATED): True,
+    (SessionStatus.ACTIVE, SessionStatus.ACTIVE),  # Idempotent
+    (SessionStatus.ACTIVE, SessionStatus.PAUSED),
+    (SessionStatus.ACTIVE, SessionStatus.TERMINATED),
 
     # From PAUSED
-    (SessionStatus.PAUSED, SessionStatus.PAUSED): True,  # Idempotent
-    (SessionStatus.PAUSED, SessionStatus.ACTIVE): True,
-    (SessionStatus.PAUSED, SessionStatus.TERMINATED): True,
+    (SessionStatus.PAUSED, SessionStatus.PAUSED),  # Idempotent
+    (SessionStatus.PAUSED, SessionStatus.ACTIVE),
+    (SessionStatus.PAUSED, SessionStatus.TERMINATED),
 
     # From TERMINATED - no valid transitions (terminal state)
-    (SessionStatus.TERMINATED, SessionStatus.TERMINATED): True,  # Idempotent
+    (SessionStatus.TERMINATED, SessionStatus.TERMINATED),  # Idempotent
 }
 
 
