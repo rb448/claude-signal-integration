@@ -150,6 +150,10 @@ class SessionCommands:
         await process.start()
         self.processes[session.id] = process
 
+        # Wire orchestrator bridge so commands can execute
+        if self.orchestrator:
+            self.orchestrator.bridge = process.get_bridge()
+
         # Map thread to session
         self.thread_sessions[thread_id] = session.id
 
