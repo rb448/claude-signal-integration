@@ -10,6 +10,7 @@ from src.session import SessionManager, SessionLifecycle, SessionStatus
 from src.claude import ClaudeProcess
 from src.claude.orchestrator import ClaudeOrchestrator
 from src.thread import ThreadCommands, ThreadMapper
+from src.approval.commands import ApprovalCommands
 
 
 class SessionCommands:
@@ -29,6 +30,7 @@ class SessionCommands:
         claude_orchestrator: Optional[ClaudeOrchestrator] = None,
         thread_commands: Optional[ThreadCommands] = None,
         thread_mapper: Optional[ThreadMapper] = None,
+        approval_commands: Optional[ApprovalCommands] = None,
     ):
         """
         Initialize SessionCommands.
@@ -40,6 +42,7 @@ class SessionCommands:
             claude_orchestrator: ClaudeOrchestrator for routing Claude commands
             thread_commands: ThreadCommands for thread mapping operations
             thread_mapper: ThreadMapper for thread-to-project mapping lookups
+            approval_commands: ApprovalCommands for approval/rejection operations
         """
         self.manager = session_manager
         self.lifecycle = session_lifecycle
@@ -47,12 +50,13 @@ class SessionCommands:
         self.orchestrator = claude_orchestrator
         self.thread_commands = thread_commands
         self.thread_mapper = thread_mapper
+        self.approval_commands = approval_commands
         self.processes: dict[str, ClaudeProcess] = {}  # session_id -> process
         self.thread_sessions: dict[str, str] = {}  # thread_id -> session_id (active sessions)
 
     async def handle(self, thread_id: str, message: str) -> str:
         """
-        Handle /session command, /thread command, or Claude command.
+        Handle /session command, /thread command, approval command, or Claude command.
 
         Args:
             thread_id: Signal thread ID for this command
@@ -61,7 +65,12 @@ class SessionCommands:
         Returns:
             Response message to send back to user (None for Claude commands)
         """
-        # Route to appropriate handler
+        # Route to appropriate handler (approval commands take priority)
+        if self.approval_commands:
+            result = await self.approval_commands.handle(message)
+            if result is not None:
+                return result
+
         if message.strip().startswith("/thread"):
             # Delegate to ThreadCommands
             if self.thread_commands:
@@ -307,10 +316,23 @@ class SessionCommands:
         Returns:
             Help text with available commands
         """
-        return """Available commands:
+        help_text = "Available commands:\n\n"
 
-/session start <project_path> - Start new session
-/session list - List all sessions
-/session resume <session_id> - Resume paused session
-/session stop <session_id> - Stop active session
+        # Add approval commands if available
+        if self.approval_commands:
+            help_text += self.approval_commands.help() + "\n\n"
+
+        # Add thread commands reference (they have /thread help)
+        if self.thread_commands:
+            help_text += "Thread Commands:\n"
+            help_text += "  /thread help - Show thread mapping commands\n\n"
+
+        # Add session commands
+        help_text += """Session Commands:
+  /session start <project_path> - Start new session
+  /session list - List all sessions
+  /session resume <session_id> - Resume paused session
+  /session stop <session_id> - Stop active session
 """
+
+        return help_text

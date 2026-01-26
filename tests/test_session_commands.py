@@ -12,6 +12,8 @@ from src.session.commands import SessionCommands
 from src.claude import ClaudeProcess
 from src.claude.orchestrator import ClaudeOrchestrator
 from src.thread import ThreadMapper, ThreadMapping
+from src.approval.commands import ApprovalCommands
+from src.approval.manager import ApprovalManager
 from datetime import datetime, UTC
 
 
@@ -749,3 +751,94 @@ async def test_start_without_thread_mapper():
     # Verify response
     assert "Started session" in response
     assert "/tmp/test-project" in response
+
+
+@pytest.mark.asyncio
+async def test_approval_commands_routed_before_session_commands():
+    """Test that approval commands take priority over session commands."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    # Create ApprovalCommands
+    approval_manager = ApprovalManager()
+    approval_commands = ApprovalCommands(approval_manager)
+
+    # Create pending approval
+    request = approval_manager.request({"tool": "Edit"}, reason="Modifies file")
+
+    # Create SessionCommands with approval_commands
+    commands = SessionCommands(
+        manager,
+        lifecycle,
+        process_factory,
+        approval_commands=approval_commands
+    )
+
+    # Execute approval command
+    response = await commands.handle("thread-123", f"approve {request.id}")
+
+    # Should route to approval commands
+    assert "Approved" in response
+    assert request.id[:8] in response
+
+
+@pytest.mark.asyncio
+async def test_approval_commands_returns_none_for_unknown():
+    """Test that approval commands return None for unknown commands, allowing fallthrough."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    # Create ApprovalCommands
+    approval_manager = ApprovalManager()
+    approval_commands = ApprovalCommands(approval_manager)
+
+    # Create SessionCommands with approval_commands
+    commands = SessionCommands(
+        manager,
+        lifecycle,
+        process_factory,
+        approval_commands=approval_commands
+    )
+
+    # Mock session list
+    manager.list.return_value = []
+
+    # Execute session command (should fall through approval commands)
+    response = await commands.handle("thread-123", "/session list")
+
+    # Should route to session commands
+    assert "No sessions found" in response
+
+
+@pytest.mark.asyncio
+async def test_help_includes_approval_commands():
+    """Test that help message includes approval commands when available."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    # Create ApprovalCommands
+    approval_manager = ApprovalManager()
+    approval_commands = ApprovalCommands(approval_manager)
+
+    # Create SessionCommands with approval_commands
+    commands = SessionCommands(
+        manager,
+        lifecycle,
+        process_factory,
+        approval_commands=approval_commands
+    )
+
+    # Get help
+    help_text = commands._help()
+
+    # Should include approval commands
+    assert "Approval Commands:" in help_text
+    assert "approve {id}" in help_text
+    assert "reject {id}" in help_text
+    assert "approve all" in help_text
