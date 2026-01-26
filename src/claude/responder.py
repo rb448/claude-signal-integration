@@ -1,6 +1,7 @@
 """Format Claude output for mobile-friendly Signal display."""
 
 import re
+import time
 from typing import List
 
 from .parser import ParsedOutput, ToolCall, Progress, Error, Response
@@ -141,3 +142,52 @@ class SignalResponder:
             remaining = remaining[len(chunk) - len(continuation_marker):].lstrip()
 
         return chunks
+
+
+class MessageBatcher:
+    """Batch rapid message updates to prevent Signal flooding."""
+
+    def __init__(self, min_batch_interval: float = 0.5):
+        """
+        Initialize message batcher.
+
+        Args:
+            min_batch_interval: Minimum time (seconds) between message sends
+        """
+        self.min_batch_interval = min_batch_interval
+        self._buffer: List[str] = []
+        self._last_flush_time = time.time()
+
+    def add(self, message: str) -> None:
+        """
+        Add a message to the buffer.
+
+        Args:
+            message: Message to buffer
+        """
+        self._buffer.append(message)
+
+    def should_flush(self) -> bool:
+        """
+        Check if buffer should be flushed.
+
+        Returns:
+            True if buffer has messages AND min interval has passed
+        """
+        if not self._buffer:
+            return False
+
+        time_since_flush = time.time() - self._last_flush_time
+        return time_since_flush >= self.min_batch_interval
+
+    def flush(self) -> List[str]:
+        """
+        Get buffered messages and reset buffer.
+
+        Returns:
+            List of buffered messages
+        """
+        messages = self._buffer.copy()
+        self._buffer.clear()
+        self._last_flush_time = time.time()
+        return messages

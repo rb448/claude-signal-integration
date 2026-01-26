@@ -1,9 +1,11 @@
 """Tests for Signal message formatting."""
 
+import asyncio
+import time
 import pytest
 
 from src.claude.parser import ToolCall, Progress, Error, Response, OutputType
-from src.claude.responder import SignalResponder
+from src.claude.responder import SignalResponder, MessageBatcher
 
 
 class TestSignalResponder:
@@ -129,3 +131,63 @@ class TestSignalResponder:
         assert chunks[0].endswith("...continued")
         # Last chunk should not have continuation at end
         assert not chunks[-1].endswith("...continued")
+
+
+class TestMessageBatcher:
+    """Test MessageBatcher for rate-aware message batching."""
+
+    def test_batcher_initialization(self):
+        """Batcher initializes with min interval."""
+        batcher = MessageBatcher(min_batch_interval=0.5)
+        assert batcher.min_batch_interval == 0.5
+        assert len(batcher.flush()) == 0  # Empty on init
+
+    def test_add_message(self):
+        """Messages can be added to buffer."""
+        batcher = MessageBatcher()
+        batcher.add("Message 1")
+        batcher.add("Message 2")
+        messages = batcher.flush()
+        assert len(messages) == 2
+        assert messages[0] == "Message 1"
+        assert messages[1] == "Message 2"
+
+    def test_flush_clears_buffer(self):
+        """Flush clears the buffer."""
+        batcher = MessageBatcher()
+        batcher.add("Message 1")
+        first_flush = batcher.flush()
+        second_flush = batcher.flush()
+        assert len(first_flush) == 1
+        assert len(second_flush) == 0
+
+    def test_should_flush_empty_buffer(self):
+        """Empty buffer should not flush."""
+        batcher = MessageBatcher(min_batch_interval=0.1)
+        time.sleep(0.2)  # Wait longer than interval
+        assert not batcher.should_flush()
+
+    def test_should_flush_before_interval(self):
+        """Should not flush before min interval passes."""
+        batcher = MessageBatcher(min_batch_interval=0.5)
+        batcher.add("Message 1")
+        assert not batcher.should_flush()
+
+    def test_should_flush_after_interval(self):
+        """Should flush after min interval passes with messages."""
+        batcher = MessageBatcher(min_batch_interval=0.1)
+        batcher.add("Message 1")
+        time.sleep(0.15)  # Wait longer than interval
+        assert batcher.should_flush()
+
+    def test_flush_resets_timer(self):
+        """Flush resets the interval timer."""
+        batcher = MessageBatcher(min_batch_interval=0.1)
+        batcher.add("Message 1")
+        time.sleep(0.15)
+        batcher.flush()
+
+        # Add new message immediately after flush
+        batcher.add("Message 2")
+        # Should not be ready to flush immediately
+        assert not batcher.should_flush()
