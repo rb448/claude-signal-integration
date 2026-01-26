@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 4 of 10 (Multi-Project Support)
-Plan: 2 of 4 in phase (in progress)
+Plan: 3 of 4 in phase (in progress)
 Status: In progress
-Last activity: 2026-01-26 — Completed 04-02-PLAN.md (Thread Command Interface)
+Last activity: 2026-01-26 — Completed 04-03-PLAN.md (Thread Management Integration)
 
-Progress: ██░░░░░░░░ 50% (Phase 4: 2/4 plans complete)
+Progress: ███░░░░░░░ 75% (Phase 4: 3/4 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 3.4 min
-- Total execution time: 1.2 hours
+- Total execution time: 1.3 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: ██░░░░░░░░ 50% (Phase 4: 2/4 plans complete)
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
 | 2 - Session Management | 7/7 | 19min | 2.7min |
 | 3 - Claude Integration | 5/5 | 15.5min | 3.1min |
-| 4 - Multi-Project Support | 2/4 | 4.75min | 2.4min |
+| 4 - Multi-Project Support | 3/4 | 8.4min | 2.8min |
 
 **Recent Trend:**
-- Last 5 plans: 3.5min (03-03), 5min (03-04), 2min (03-05), 2min (04-01), 2.75min (04-02)
-- Trend: Consistent 2-3min execution for TDD plans - Phase 4 maintaining excellent velocity
+- Last 5 plans: 5min (03-04), 2min (03-05), 2min (04-01), 2.75min (04-02), 3.7min (04-03)
+- Trend: Phase 4 averaging 2.8min per plan - excellent velocity maintained
 
 ## Accumulated Context
 
@@ -108,6 +108,11 @@ Recent decisions affecting current work:
 | Truncate thread_ids to 8 chars in thread messages | 04-02 | Mobile screens can't display full UUIDs, 8 chars sufficient | Matches /session list display format from Phase 2-5 |
 | Validate paths before mapper.map() | 04-02 | Provide clear "Path does not exist" error before database operations | Better error messages, fail fast on user input errors |
 | Include persistence note in /thread help | 04-02 | Users need to know mappings survive daemon restarts | Help text clarifies mapping lifetime expectations |
+| ThreadMapper initialized in __init__, async initialize() called in start() | 04-03 | Follow Phase 2 SessionManager pattern for async component initialization | Consistent lifecycle management, async DB operations in async context |
+| ThreadCommands created after mapper initialization | 04-03 | ThreadCommands requires initialized mapper with DB schema | Ensures database ready before command handler created |
+| SessionCommands.thread_commands as optional parameter | 04-03 | Follow orchestrator pattern - backwards compatible, testable | Works without thread_commands (graceful degradation) |
+| Thread commands wired via property assignment | 04-03 | SessionCommands created before ThreadCommands exists | Flexible wiring after both components initialized |
+| thread_mappings.db in Application Support | 04-03 | Follow sessions.db pattern for consistent data directory | macOS standard location, user-friendly path |
 
 ### Pending Todos
 
@@ -120,5 +125,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 04-02-PLAN.md (Thread Command Interface) - Phase 4 50% complete (2/4 plans)
+Stopped at: Completed 04-03-PLAN.md (Thread Management Integration) - Phase 4 75% complete (3/4 plans)
 Resume file: None
