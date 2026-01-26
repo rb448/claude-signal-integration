@@ -69,10 +69,15 @@ class TestAttachmentHandler:
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
 
-        with patch('aiohttp.ClientSession') as mock_session_class:
-            mock_session = AsyncMock()
-            mock_session_class.return_value.__aenter__.return_value = mock_session
-            mock_session.post.return_value.__aenter__.return_value = mock_response
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
 
             result = await handler.send_code_file(
                 recipient="+12345678900",
@@ -97,10 +102,15 @@ class TestAttachmentHandler:
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
 
-        with patch('aiohttp.ClientSession') as mock_session_class:
-            mock_session = AsyncMock()
-            mock_session_class.return_value.__aenter__.return_value = mock_session
-            mock_session.post.return_value.__aenter__.return_value = mock_response
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
 
             await handler.send_code_file(
                 recipient="+12345678900",
@@ -131,10 +141,15 @@ class TestAttachmentHandler:
         mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
 
         with patch.object(handler, '_create_temp_file', side_effect=track_temp_file):
-            with patch('aiohttp.ClientSession') as mock_session_class:
-                mock_session = AsyncMock()
-                mock_session_class.return_value.__aenter__.return_value = mock_session
-                mock_session.post.return_value.__aenter__.return_value = mock_response
+            with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+                mock_session = MagicMock()
+                mock_post_cm = AsyncMock()
+                mock_post_cm.__aenter__.return_value = mock_response
+                mock_session.post.return_value = mock_post_cm
+
+                mock_session_cm = AsyncMock()
+                mock_session_cm.__aenter__.return_value = mock_session
+                mock_session_class.return_value = mock_session_cm
 
                 await handler.send_code_file(
                     recipient="+12345678900",
@@ -164,10 +179,15 @@ class TestAttachmentHandler:
         mock_response.text = AsyncMock(return_value="Server error")
 
         with patch.object(handler, '_create_temp_file', side_effect=track_temp_file):
-            with patch('aiohttp.ClientSession') as mock_session_class:
-                mock_session = AsyncMock()
-                mock_session_class.return_value.__aenter__.return_value = mock_session
-                mock_session.post.return_value.__aenter__.return_value = mock_response
+            with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+                mock_session = MagicMock()
+                mock_post_cm = AsyncMock()
+                mock_post_cm.__aenter__.return_value = mock_response
+                mock_session.post.return_value = mock_post_cm
+
+                mock_session_cm = AsyncMock()
+                mock_session_cm.__aenter__.return_value = mock_session
+                mock_session_class.return_value = mock_session_cm
 
                 result = await handler.send_code_file(
                     recipient="+12345678900",
@@ -188,10 +208,15 @@ class TestAttachmentHandler:
         mock_response.status = 500
         mock_response.text = AsyncMock(return_value="Server error")
 
-        with patch('aiohttp.ClientSession') as mock_session_class:
-            mock_session = AsyncMock()
-            mock_session_class.return_value.__aenter__.return_value = mock_session
-            mock_session.post.return_value.__aenter__.return_value = mock_response
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
 
             result = await handler.send_code_file(
                 recipient="+12345678900",
@@ -209,10 +234,15 @@ class TestAttachmentHandler:
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"timestamp": "987654321"})
 
-        with patch('aiohttp.ClientSession') as mock_session_class:
-            mock_session = AsyncMock()
-            mock_session_class.return_value.__aenter__.return_value = mock_session
-            mock_session.post.return_value.__aenter__.return_value = mock_response
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
 
             result = await handler.send_code_file(
                 recipient="+12345678900",
@@ -230,10 +260,15 @@ class TestAttachmentHandler:
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
 
-        with patch('aiohttp.ClientSession') as mock_session_class:
-            mock_session = AsyncMock()
-            mock_session_class.return_value.__aenter__.return_value = mock_session
-            mock_session.post.return_value.__aenter__.return_value = mock_response
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
 
             result = await handler.send_code_file(
                 recipient="+12345678900",
@@ -254,10 +289,15 @@ class TestAttachmentHandler:
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
 
-        with patch('aiohttp.ClientSession') as mock_session_class:
-            mock_session = AsyncMock()
-            mock_session_class.return_value.__aenter__.return_value = mock_session
-            mock_session.post.return_value.__aenter__.return_value = mock_response
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
 
             result = await handler.send_code_file(
                 recipient="+12345678900",
@@ -275,10 +315,15 @@ class TestAttachmentHandler:
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value={"timestamp": "123456789"})
 
-        with patch('aiohttp.ClientSession') as mock_session_class:
-            mock_session = AsyncMock()
-            mock_session_class.return_value.__aenter__.return_value = mock_session
-            mock_session.post.return_value.__aenter__.return_value = mock_response
+        with patch('src.signal.attachment_handler.aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_post_cm = AsyncMock()
+            mock_post_cm.__aenter__.return_value = mock_response
+            mock_session.post.return_value = mock_post_cm
+
+            mock_session_cm = AsyncMock()
+            mock_session_cm.__aenter__.return_value = mock_session
+            mock_session_class.return_value = mock_session_cm
 
             result = await handler.send_code_file(
                 recipient="+12345678900",
