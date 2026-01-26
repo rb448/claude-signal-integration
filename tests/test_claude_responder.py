@@ -319,3 +319,88 @@ And some more text."""
         assert "explanation" in result
         assert "```" in result
         assert "more text" in result
+
+
+class TestAttachmentIntegration:
+    """Test SignalResponder attachment handling integration."""
+
+    @pytest.mark.asyncio
+    async def test_send_with_attachments_uploads_code(self):
+        """send_with_attachments uploads code and updates message."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        responder = SignalResponder(signal_api_url="http://localhost:8080")
+
+        # Mock the attachment handler
+        responder.attachment_handler = AsyncMock()
+        responder.attachment_handler.send_code_file = AsyncMock(return_value="12345")
+
+        # Message with attachment marker
+        formatted = "[Code too long (150 lines) - attachment coming...]"
+        code_blocks = [("line 0\nline 1\n" * 75, "example.py")]
+
+        result = await responder.send_with_attachments(
+            formatted, code_blocks, "+1234567890"
+        )
+
+        # Should upload attachment
+        responder.attachment_handler.send_code_file.assert_called_once()
+
+        # Should update message with confirmation
+        assert "📎 Sent example.py" in result
+        assert "150 lines" in result
+        assert "attachment coming" not in result
+
+    @pytest.mark.asyncio
+    async def test_send_with_attachments_handles_upload_failure(self):
+        """send_with_attachments handles attachment upload failures gracefully."""
+        from unittest.mock import AsyncMock
+
+        responder = SignalResponder(signal_api_url="http://localhost:8080")
+
+        # Mock the attachment handler to fail
+        responder.attachment_handler = AsyncMock()
+        responder.attachment_handler.send_code_file = AsyncMock(return_value=None)
+
+        formatted = "[Code too long (150 lines) - attachment coming...]"
+        code_blocks = [("code content", "test.py")]
+
+        result = await responder.send_with_attachments(
+            formatted, code_blocks, "+1234567890"
+        )
+
+        # Message should remain unchanged if upload fails
+        assert "[Code too long (150 lines) - attachment coming...]" in result
+
+    @pytest.mark.asyncio
+    async def test_send_with_attachments_multiple_blocks(self):
+        """send_with_attachments handles multiple code blocks."""
+        from unittest.mock import AsyncMock
+
+        responder = SignalResponder(signal_api_url="http://localhost:8080")
+
+        # Mock the attachment handler
+        responder.attachment_handler = AsyncMock()
+        responder.attachment_handler.send_code_file = AsyncMock(return_value="12345")
+
+        formatted = """First file:
+[Code too long (150 lines) - attachment coming...]
+
+Second file:
+[Code too long (200 lines) - attachment coming...]"""
+
+        code_blocks = [
+            ("code1" * 50, "file1.py"),
+            ("code2" * 100, "file2.js")
+        ]
+
+        result = await responder.send_with_attachments(
+            formatted, code_blocks, "+1234567890"
+        )
+
+        # Should upload both attachments
+        assert responder.attachment_handler.send_code_file.call_count == 2
+
+        # Should update both messages
+        assert "📎 Sent file1.py" in result
+        assert "📎 Sent file2.js" in result
