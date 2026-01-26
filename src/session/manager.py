@@ -7,12 +7,20 @@ GREEN Phase: Implementation to make tests pass.
 import asyncio
 import json
 import aiosqlite
+import structlog
 from dataclasses import dataclass
 from datetime import datetime, UTC
 from enum import Enum
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
+
+logger = structlog.get_logger(__name__)
+
+
+class SessionNotFoundError(Exception):
+    """Raised when a session is not found."""
+    pass
 
 
 class SessionStatus(Enum):
@@ -60,6 +68,7 @@ class SessionManager:
         self.db_path = db_path
         self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()
+        self._log = logger.bind(db_path=db_path)
 
     async def initialize(self):
         """
@@ -231,6 +240,44 @@ class SessionManager:
 
         # Retrieve updated session
         return await self.get(session_id)
+
+    async def update_context(
+        self,
+        session_id: str,
+        conversation_history: dict
+    ) -> None:
+        """
+        Update session conversation context.
+
+        Stores conversation history for session resumption.
+        Called by Claude integration (Phase 3) during active conversations.
+
+        Args:
+            session_id: Session UUID
+            conversation_history: Dict containing conversation turns
+
+        Raises:
+            SessionNotFoundError: If session doesn't exist
+        """
+        session = await self.get(session_id)
+        if not session:
+            raise SessionNotFoundError(f"Session {session_id} not found")
+
+        # Update context JSON blob with conversation history
+        updated_context = {**session.context, "conversation_history": conversation_history}
+
+        async with self._lock:
+            await self._connection.execute(
+                "UPDATE sessions SET context = ? WHERE id = ?",
+                (json.dumps(updated_context), session_id)
+            )
+            await self._connection.commit()
+
+        self._log.info(
+            "session_context_updated",
+            session_id=session_id,
+            history_length=len(conversation_history)
+        )
 
     def _row_to_session(self, row: tuple) -> Session:
         """
