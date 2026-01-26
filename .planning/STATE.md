@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 Phase: 5 of 10 (Permission & Approval Workflows)
 Plan: 2 of 5 complete
 Status: In progress
-Last activity: 2026-01-26 — Completed 05-02-PLAN.md (Approval State Machine)
+Last activity: 2026-01-26 — Completed 05-01-PLAN.md (Operation Detection) and 05-02-PLAN.md (Approval State Machine)
 
 Progress: ████████░░ 42% (22 of 52 total plans complete)
 
@@ -21,7 +21,7 @@ Progress: ████████░░ 42% (22 of 52 total plans complete)
 **Velocity:**
 - Total plans completed: 22
 - Average duration: 3.5 min
-- Total execution time: 1.6 hours (93.4 min)
+- Total execution time: 1.6 hours (96.4 min)
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: ████████░░ 42% (22 of 52 total plans complete)
 | 2 - Session Management | 7/7 | 19min | 2.7min |
 | 3 - Claude Integration | 5/5 | 15.5min | 3.1min |
 | 4 - Multi-Project Support | 5/5 | 21.6min | 4.3min |
-| 5 - Permission & Approval | 2/5 | 2.4min | 1.2min |
+| 5 - Permission & Approval | 2/5 | 5.4min | 2.7min |
 
 **Recent Trend:**
-- Last 5 plans: 2.75min (04-02), 3.7min (04-03), 6.2min (04-04), 7min (04-05), 2.4min (05-02)
-- Trend: Phase 5 started strong with TDD - 2.4min for comprehensive state machine
+- Last 5 plans: 3.7min (04-03), 6.2min (04-04), 7min (04-05), 2.4min (05-02), 3min (05-01)
+- Trend: Phase 5 efficient with TDD - 2.7min average, both plans under 3min
 
 ## Accumulated Context
 
@@ -121,6 +121,11 @@ Recent decisions affecting current work:
 | Log thread mapping count on daemon startup | 04-05 | Provides visibility into mapping state | Users can verify mappings loaded, debugging startup issues easier |
 | Use capsys fixture for structlog output verification | 04-05 | structlog writes to stdout, not Python logging system | Tests correctly capture and verify log messages |
 | Mock health server in daemon tests | 04-05 | Prevents port 8081 conflicts in concurrent/consecutive test runs | Tests run reliably without port binding errors |
+| Safe operations: Read, Grep, Glob | 05-01 | Read-only operations don't modify files or state | Auto-execute without approval, improves UX |
+| Destructive operations: Edit, Write, Bash | 05-01 | Operations that can modify files or system state | Require user approval, prevents unwanted changes |
+| Unknown tools default to DESTRUCTIVE | 05-01 | Fail-safe approach when encountering new tool types | Better to require approval unnecessarily than skip needed approval |
+| Case-insensitive tool name matching | 05-01 | Claude CLI might vary capitalization of tool names | "Read", "read", "READ" all work consistently |
+| Conservative bash classification | 05-01 | Even read-only bash commands marked destructive | Shell commands unpredictable, fail-safe approach safer |
 | UUID4 for approval IDs | 05-02 | Prevents collisions in concurrent request creation | Globally unique without coordination, follows session ID pattern |
 | UTC-aware datetime.now(UTC) for approval timestamps | 05-02 | datetime.utcnow() deprecated in Python 3.12+ | Consistent with Phase 2, future-proof timestamps |
 | 10-minute timeout for pending approvals | 05-02 | Balances user convenience with system responsiveness | Configurable via TIMEOUT_MINUTES class variable |
@@ -139,5 +144,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 05-02-PLAN.md (Approval State Machine) - Phase 5 in progress (2/5 plans)
+Stopped at: Completed 05-01-PLAN.md (Operation Detection) and 05-02-PLAN.md (Approval State Machine) - Phase 5 in progress (2/5 plans)
 Resume file: None
