@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from src.session import SessionManager, SessionStatus, Session, SessionLifecycle
 from src.session.commands import SessionCommands
 from src.claude import ClaudeProcess
+from src.claude.orchestrator import ClaudeOrchestrator
 from datetime import datetime, UTC
 
 
@@ -381,3 +382,56 @@ async def test_help_command():
     assert "list" in response.lower()
     assert "resume" in response.lower()
     assert "stop" in response.lower()
+
+
+@pytest.mark.asyncio
+async def test_start_sets_orchestrator_bridge():
+    """Test that _start() wires orchestrator bridge to enable command execution."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+    orchestrator = MagicMock(spec=ClaudeOrchestrator)
+
+    # Mock session creation
+    session = Session(
+        id="test-session-id",
+        project_path="/tmp/test-project",
+        thread_id="thread-123",
+        status=SessionStatus.CREATED,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    manager.create.return_value = session
+
+    # Mock transition to ACTIVE
+    active_session = Session(
+        id="test-session-id",
+        project_path="/tmp/test-project",
+        thread_id="thread-123",
+        status=SessionStatus.ACTIVE,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    lifecycle.transition.return_value = active_session
+
+    # Mock process
+    mock_process = AsyncMock(spec=ClaudeProcess)
+    mock_bridge = MagicMock()
+    mock_process.get_bridge.return_value = mock_bridge
+    process_factory.return_value = mock_process
+
+    # Create commands handler with orchestrator
+    commands = SessionCommands(manager, lifecycle, process_factory, orchestrator)
+
+    # Execute start command
+    with patch('pathlib.Path.exists', return_value=True):
+        await commands.handle("thread-123", "/session start /tmp/test-project")
+
+    # Verify bridge is set (not None)
+    assert orchestrator.bridge is not None, "orchestrator.bridge should be set after _start()"
+
+    # Verify it's the process's bridge
+    assert orchestrator.bridge is mock_bridge, "orchestrator.bridge should reference process bridge"
