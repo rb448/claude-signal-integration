@@ -11,6 +11,7 @@ from src.session import SessionManager, SessionStatus, Session, SessionLifecycle
 from src.session.commands import SessionCommands
 from src.claude import ClaudeProcess
 from src.claude.orchestrator import ClaudeOrchestrator
+from src.thread import ThreadMapper, ThreadMapping
 from datetime import datetime, UTC
 
 
@@ -540,3 +541,211 @@ async def test_handle_thread_commands_unavailable():
 
     # Verify error response
     assert "not available" in response.lower()
+
+
+@pytest.mark.asyncio
+async def test_start_uses_thread_mapping():
+    """Test /session start uses thread mapping when available, ignores explicit path."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+    thread_mapper = AsyncMock(spec=ThreadMapper)
+
+    # Mock thread mapping
+    mapping = ThreadMapping(
+        thread_id="thread-123",
+        project_path="/mapped/project",
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    thread_mapper.get_by_thread.return_value = mapping
+
+    # Mock session creation
+    session = Session(
+        id="test-session-id",
+        project_path="/mapped/project",
+        thread_id="thread-123",
+        status=SessionStatus.CREATED,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    manager.create.return_value = session
+
+    # Mock transition to ACTIVE
+    active_session = Session(
+        id="test-session-id",
+        project_path="/mapped/project",
+        thread_id="thread-123",
+        status=SessionStatus.ACTIVE,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    lifecycle.transition.return_value = active_session
+
+    # Mock process
+    mock_process = AsyncMock(spec=ClaudeProcess)
+    process_factory.return_value = mock_process
+
+    # Create commands handler with thread_mapper
+    commands = SessionCommands(manager, lifecycle, process_factory, thread_mapper=thread_mapper)
+
+    # Execute command with explicit path (should be ignored in favor of mapping)
+    with patch('pathlib.Path.exists', return_value=True):
+        response = await commands.handle("thread-123", "/session start /different/path")
+
+    # Verify thread mapping lookup
+    thread_mapper.get_by_thread.assert_called_once_with("thread-123")
+
+    # Verify session created with MAPPED path, not explicit path
+    manager.create.assert_called_once_with("/mapped/project", "thread-123")
+
+    # Verify process spawned with mapped path
+    process_factory.assert_called_once_with("test-session-id", "/mapped/project")
+
+    # Verify response
+    assert "Started session" in response
+    assert "/mapped/project" in response
+
+
+@pytest.mark.asyncio
+async def test_start_unmapped_thread_requires_path():
+    """Test /session start on unmapped thread requires explicit path."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+    thread_mapper = AsyncMock(spec=ThreadMapper)
+
+    # Mock no thread mapping
+    thread_mapper.get_by_thread.return_value = None
+
+    # Create commands handler with thread_mapper
+    commands = SessionCommands(manager, lifecycle, process_factory, thread_mapper=thread_mapper)
+
+    # Execute command without path on unmapped thread
+    response = await commands.handle("thread-123", "/session start")
+
+    # Verify thread mapping lookup
+    thread_mapper.get_by_thread.assert_called_once_with("thread-123")
+
+    # Verify error message mentions both options
+    assert "not mapped" in response.lower()
+    assert "/thread map" in response or "/session start" in response
+
+    # Verify no session created
+    manager.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_start_unmapped_thread_with_path_works():
+    """Test /session start on unmapped thread with explicit path works (backward compatibility)."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+    thread_mapper = AsyncMock(spec=ThreadMapper)
+
+    # Mock no thread mapping
+    thread_mapper.get_by_thread.return_value = None
+
+    # Mock session creation
+    session = Session(
+        id="test-session-id",
+        project_path="/explicit/path",
+        thread_id="thread-123",
+        status=SessionStatus.CREATED,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    manager.create.return_value = session
+
+    # Mock transition to ACTIVE
+    active_session = Session(
+        id="test-session-id",
+        project_path="/explicit/path",
+        thread_id="thread-123",
+        status=SessionStatus.ACTIVE,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    lifecycle.transition.return_value = active_session
+
+    # Mock process
+    mock_process = AsyncMock(spec=ClaudeProcess)
+    process_factory.return_value = mock_process
+
+    # Create commands handler with thread_mapper
+    commands = SessionCommands(manager, lifecycle, process_factory, thread_mapper=thread_mapper)
+
+    # Execute command with explicit path
+    with patch('pathlib.Path.exists', return_value=True):
+        response = await commands.handle("thread-123", "/session start /explicit/path")
+
+    # Verify thread mapping lookup
+    thread_mapper.get_by_thread.assert_called_once_with("thread-123")
+
+    # Verify session created with explicit path
+    manager.create.assert_called_once_with("/explicit/path", "thread-123")
+
+    # Verify process spawned
+    process_factory.assert_called_once_with("test-session-id", "/explicit/path")
+
+    # Verify response
+    assert "Started session" in response
+    assert "/explicit/path" in response
+
+
+@pytest.mark.asyncio
+async def test_start_without_thread_mapper():
+    """Test /session start works without thread_mapper (graceful degradation)."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    # Mock session creation
+    session = Session(
+        id="test-session-id",
+        project_path="/tmp/test-project",
+        thread_id="thread-123",
+        status=SessionStatus.CREATED,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    manager.create.return_value = session
+
+    # Mock transition to ACTIVE
+    active_session = Session(
+        id="test-session-id",
+        project_path="/tmp/test-project",
+        thread_id="thread-123",
+        status=SessionStatus.ACTIVE,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    lifecycle.transition.return_value = active_session
+
+    # Mock process
+    mock_process = AsyncMock(spec=ClaudeProcess)
+    process_factory.return_value = mock_process
+
+    # Create commands handler WITHOUT thread_mapper
+    commands = SessionCommands(manager, lifecycle, process_factory)
+
+    # Execute command with explicit path
+    with patch('pathlib.Path.exists', return_value=True):
+        response = await commands.handle("thread-123", "/session start /tmp/test-project")
+
+    # Verify session created with explicit path
+    manager.create.assert_called_once_with("/tmp/test-project", "thread-123")
+
+    # Verify response
+    assert "Started session" in response
+    assert "/tmp/test-project" in response

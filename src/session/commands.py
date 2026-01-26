@@ -137,21 +137,40 @@ class SessionCommands:
 
         Args:
             thread_id: Signal thread ID
-            project_path: Path to project directory
+            project_path: Path to project directory (optional if thread is mapped)
 
         Returns:
             Success or error message
         """
-        if project_path is None:
+        # Try to get thread mapping first
+        resolved_path: str | None = None
+
+        if self.thread_mapper:
+            mapping = await self.thread_mapper.get_by_thread(thread_id)
+            if mapping:
+                resolved_path = mapping.project_path
+                # Ignore user-provided path if thread is mapped
+            elif not project_path:
+                # No mapping, no path provided
+                return (
+                    "Error: Thread not mapped to a project.\n"
+                    "Use '/thread map <path>' or '/session start <path>'"
+                )
+
+        # Fall back to explicit path if no mapping
+        if not resolved_path:
+            resolved_path = project_path
+
+        if not resolved_path:
             return "Error: Missing project path\n\nUsage: /session start <project_path>"
 
         # Validate project path exists
-        path = Path(project_path)
+        path = Path(resolved_path)
         if not path.exists():
-            return f"Error: Project path does not exist: {project_path}"
+            return f"Error: Project path does not exist: {resolved_path}"
 
         # Create session
-        session = await self.manager.create(project_path, thread_id)
+        session = await self.manager.create(resolved_path, thread_id)
 
         # Transition CREATED -> ACTIVE
         session = await self.lifecycle.transition(
@@ -159,7 +178,7 @@ class SessionCommands:
         )
 
         # Spawn Claude process
-        process = self.process_factory(session.id, project_path)
+        process = self.process_factory(session.id, resolved_path)
         await process.start()
         self.processes[session.id] = process
 
@@ -170,7 +189,7 @@ class SessionCommands:
         # Map thread to session
         self.thread_sessions[thread_id] = session.id
 
-        return f"Started session {session.id[:8]} for {project_path}"
+        return f"Started session {session.id[:8]} for {resolved_path}"
 
     async def _list(self) -> str:
         """
