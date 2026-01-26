@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 6 of 10 (Code Display & Mobile UX)
-Plan: 1 of 5
+Plan: 2 of 5
 Status: In progress
-Last activity: 2026-01-26 — Completed 06-01-PLAN.md (Code Display Foundation)
+Last activity: 2026-01-26 — Completed 06-02-PLAN.md (Syntax Highlighting)
 
-Progress: ██████████░ 51% (5 phases + 1 plan complete)
+Progress: ██████████░ 52% (5 phases + 2 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
+- Total plans completed: 27
 - Average duration: 4.0 min
-- Total execution time: 2.1 hours (125.8 min)
+- Total execution time: 2.2 hours (129 min)
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: ██████████░ 51% (5 phases + 1 plan complete)
 | 3 - Claude Integration | 5/5 | 15.5min | 3.1min |
 | 4 - Multi-Project Support | 5/5 | 21.6min | 4.3min |
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
-| 6 - Code Display & Mobile UX | 1/5 | 2min | 2.0min |
+| 6 - Code Display & Mobile UX | 2/5 | 5.2min | 2.6min |
 
 **Recent Trend:**
-- Last 5 plans: 2.4min (05-01), 3min (05-02), 6.2min (05-04), 15.2min (05-05), 2min (06-01)
-- Trend: Phase 6 starting strong with 2min plan - TDD workflow efficient
+- Last 5 plans: 3min (05-02), 6.2min (05-04), 15.2min (05-05), 2min (06-01), 3.2min (06-02)
+- Trend: Phase 6 maintaining 2-3min pace - TDD workflow efficient for focused components
 
 ## Accumulated Context
 
@@ -146,6 +146,9 @@ Recent decisions affecting current work:
 | Word boundary breaking in code wrapping | 06-01 | Breaking mid-identifier creates confusing partial tokens | Hard break at MAX_WIDTH if no space found (fallback) |
 | INLINE_MAX = 20 lines, ATTACH_MIN = 100 lines | 06-01 | Balance inline context with attachment for large code | Mid-range (20-100) defaults to inline for better UX |
 | Mid-range code (20-100 lines) defaults to inline | 06-01 | Better to show context inline than force download | Future /code full command will override for complete view |
+| Terminal256Formatter with monokai style | 06-02 | Signal supports ANSI codes, monokai has high contrast for mobile | Good syntax distinction without overwhelming small screens |
+| Rely on Pygments guess_lexer for language detection | 06-02 | Built-in detection handles Python/JS/TS/Rust/Go correctly | Simpler than custom regex patterns, leverages library robustness |
+| Auto-detect language by default, allow explicit override | 06-02 | Reduces friction for users (no language specification needed) | Graceful fallback to plain text for unknown languages |
 
 ### Pending Todos
 
@@ -158,5 +161,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 06-01-PLAN.md (Code Display Foundation)
+Stopped at: Completed 06-02-PLAN.md (Syntax Highlighting)
 Resume file: None
