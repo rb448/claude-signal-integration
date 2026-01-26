@@ -60,7 +60,9 @@ async def test_start_creates_session_and_spawns_process():
     manager.create.assert_called_once_with("/tmp/test-project", "thread-123")
 
     # Verify transition CREATED -> ACTIVE
-    lifecycle.transition.assert_called_once_with("test-session-id", SessionStatus.ACTIVE)
+    lifecycle.transition.assert_called_once_with(
+        "test-session-id", SessionStatus.CREATED, SessionStatus.ACTIVE
+    )
 
     # Verify process spawned
     process_factory.assert_called_once_with("test-session-id", "/tmp/test-project")
@@ -221,7 +223,9 @@ async def test_resume_transitions_paused_to_active():
     manager.get.assert_called_once_with("session-1")
 
     # Verify transition PAUSED -> ACTIVE
-    lifecycle.transition.assert_called_once_with("session-1", SessionStatus.ACTIVE)
+    lifecycle.transition.assert_called_once_with(
+        "session-1", SessionStatus.PAUSED, SessionStatus.ACTIVE
+    )
 
     # Verify process spawned
     process_factory.assert_called_once_with("session-1", "/tmp/project")
@@ -315,7 +319,9 @@ async def test_stop_terminates_process_and_session():
     mock_process.stop.assert_called_once()
 
     # Verify transition ACTIVE -> TERMINATED
-    lifecycle.transition.assert_called_once_with("session-1", SessionStatus.TERMINATED)
+    lifecycle.transition.assert_called_once_with(
+        "session-1", SessionStatus.ACTIVE, SessionStatus.TERMINATED
+    )
 
     # Verify response
     assert "Stopped session" in response

@@ -91,7 +91,9 @@ class SessionCommands:
         session = await self.manager.create(project_path, thread_id)
 
         # Transition CREATED -> ACTIVE
-        session = await self.lifecycle.transition(session.id, SessionStatus.ACTIVE)
+        session = await self.lifecycle.transition(
+            session.id, SessionStatus.CREATED, SessionStatus.ACTIVE
+        )
 
         # Spawn Claude process
         process = self.process_factory(session.id, project_path)
@@ -148,7 +150,9 @@ class SessionCommands:
             return f"Error: Session not found: {session_id}"
 
         # Transition PAUSED -> ACTIVE
-        session = await self.lifecycle.transition(session_id, SessionStatus.ACTIVE)
+        session = await self.lifecycle.transition(
+            session_id, SessionStatus.PAUSED, SessionStatus.ACTIVE
+        )
 
         # Spawn Claude process if not already running
         if session_id not in self.processes:
@@ -183,7 +187,9 @@ class SessionCommands:
             del self.processes[session_id]
 
         # Transition ACTIVE -> TERMINATED
-        await self.lifecycle.transition(session_id, SessionStatus.TERMINATED)
+        await self.lifecycle.transition(
+            session_id, SessionStatus.ACTIVE, SessionStatus.TERMINATED
+        )
 
         return f"Stopped session {session_id}"
 
