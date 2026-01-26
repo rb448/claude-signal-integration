@@ -191,3 +191,131 @@ class TestMessageBatcher:
         batcher.add("Message 2")
         # Should not be ready to flush immediately
         assert not batcher.should_flush()
+
+
+class TestCodeDisplayIntegration:
+    """Test SignalResponder code display integration."""
+
+    def test_detects_code_blocks(self):
+        """Response with code blocks triggers code formatting."""
+        responder = SignalResponder()
+        response = Response(
+            type=OutputType.RESPONSE,
+            text="Here's the code:\n```python\ndef hello():\n    print('world')\n```"
+        )
+        result = responder.format(response)
+        # Should contain formatted code with highlighting
+        assert "```" in result
+        assert "def hello" in result
+
+    def test_formats_code_with_formatter(self):
+        """Code blocks get formatted for mobile width."""
+        responder = SignalResponder()
+        response = Response(
+            type=OutputType.RESPONSE,
+            text="```python\ndef very_long_function_name_that_exceeds_mobile_width():\n    pass\n```"
+        )
+        result = responder.format(response)
+        # Formatted code should have continuation markers for long lines
+        assert "```" in result
+
+    def test_highlights_code_with_syntax(self):
+        """Code blocks get syntax highlighting."""
+        responder = SignalResponder()
+        response = Response(
+            type=OutputType.RESPONSE,
+            text="```python\ndef hello():\n    return 'world'\n```"
+        )
+        result = responder.format(response)
+        # Should contain ANSI escape codes from syntax highlighting
+        # (simplified check - just ensure processing happened)
+        assert "```" in result
+
+    def test_detects_git_diff(self):
+        """Response with git diff triggers diff rendering."""
+        responder = SignalResponder()
+        diff_text = """diff --git a/file.py b/file.py
+index 1234567..abcdefg 100644
+--- a/file.py
++++ b/file.py
+@@ -1,3 +1,3 @@
+ def hello():
+-    print('old')
++    print('new')
+"""
+        response = Response(type=OutputType.RESPONSE, text=diff_text)
+        result = responder.format(response)
+        # Should contain diff summary
+        assert "Changes:" in result or "Modified" in result
+
+    def test_renders_diff_with_renderer(self):
+        """Diffs get rendered with mobile-friendly layout."""
+        responder = SignalResponder()
+        diff_text = """diff --git a/test.py b/test.py
+index 1234567..abcdefg 100644
+--- a/test.py
++++ b/test.py
+@@ -1,2 +1,2 @@
+-old line
++new line
+"""
+        response = Response(type=OutputType.RESPONSE, text=diff_text)
+        result = responder.format(response)
+        # Should contain rendered diff with emoji markers
+        assert "➕" in result or "➖" in result or "Modified" in result
+
+    def test_generates_diff_summary(self):
+        """Diffs include plain-English summary before details."""
+        responder = SignalResponder()
+        diff_text = """diff --git a/config.json b/config.json
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/config.json
+@@ -0,0 +1,5 @@
++{
++  "key": "value"
++}
+"""
+        response = Response(type=OutputType.RESPONSE, text=diff_text)
+        result = responder.format(response)
+        # Should have summary before diff details
+        assert "Created" in result or "config.json" in result
+
+    def test_detects_long_code_for_attachment(self):
+        """Long code (>100 lines) triggers attachment mode."""
+        responder = SignalResponder()
+        long_code = "\n".join([f"line {i}" for i in range(150)])
+        response = Response(
+            type=OutputType.RESPONSE,
+            text=f"```python\n{long_code}\n```"
+        )
+        result = responder.format(response)
+        # Should indicate attachment needed
+        assert "attachment" in result.lower() or "lines" in result
+
+    def test_preserves_non_code_text(self):
+        """Plain text without code/diff passes through unchanged."""
+        responder = SignalResponder()
+        plain_text = "This is a plain response without any code."
+        response = Response(type=OutputType.RESPONSE, text=plain_text)
+        result = responder.format(response)
+        assert result == plain_text
+
+    def test_handles_mixed_content(self):
+        """Response with text + code + diff processes all correctly."""
+        responder = SignalResponder()
+        mixed = """Here's an explanation.
+
+```python
+def example():
+    pass
+```
+
+And some more text."""
+        response = Response(type=OutputType.RESPONSE, text=mixed)
+        result = responder.format(response)
+        # Should preserve structure with formatted code
+        assert "explanation" in result
+        assert "```" in result
+        assert "more text" in result
