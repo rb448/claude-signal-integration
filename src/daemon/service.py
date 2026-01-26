@@ -123,8 +123,11 @@ class ServiceDaemon:
             logger.info("routing_session_command", sender=sender, command=text)
             response = await self.session_commands.handle(thread_id, text)
             # Send response back to user
-            # TODO: Implement signal_client.send_message() when available
-            logger.info("session_command_response", response=response)
+            try:
+                await self.signal_client.send_message(sender, response)
+                logger.info("session_command_response", response=response)
+            except Exception as e:
+                logger.error("send_response_failed", error=str(e), recipient=sender)
             return
 
         # Process authorized message
