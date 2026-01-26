@@ -88,3 +88,87 @@ class TestCodeFormatter:
                 if before_marker and before_marker[-1].isalnum():
                     # If it ends with alphanumeric, next char should be word boundary
                     assert True  # This is acceptable - we tried to break at space
+
+
+class TestLengthDetector:
+    """Test LengthDetector inline vs attachment decision logic."""
+
+    def test_should_attach_returns_false_for_short_code(self):
+        """Code under 20 lines should display inline."""
+        detector = LengthDetector()
+        code = "\n".join([f"line {i}" for i in range(15)])  # 15 lines
+
+        result = detector.should_attach(code)
+
+        assert result is False, "Code < 20 lines should not be attached"
+
+    def test_should_attach_returns_true_for_long_code(self):
+        """Code over 100 lines should be sent as attachment."""
+        detector = LengthDetector()
+        code = "\n".join([f"line {i}" for i in range(101)])  # 101 lines
+
+        result = detector.should_attach(code)
+
+        assert result is True, "Code > 100 lines should be attached"
+
+    def test_should_attach_returns_false_for_mid_range(self):
+        """Code between 20-100 lines should default to inline."""
+        detector = LengthDetector()
+        code = "\n".join([f"line {i}" for i in range(50)])  # 50 lines
+
+        result = detector.should_attach(code)
+
+        assert result is False, "Code 20-100 lines should default to inline"
+
+    def test_should_attach_boundary_at_20_lines(self):
+        """Exactly 20 lines should display inline (at boundary)."""
+        detector = LengthDetector()
+        code = "\n".join([f"line {i}" for i in range(20)])  # 20 lines
+
+        result = detector.should_attach(code)
+
+        assert result is False, "Exactly 20 lines should be inline"
+
+    def test_should_attach_boundary_at_100_lines(self):
+        """Exactly 100 lines should display inline (below attachment threshold)."""
+        detector = LengthDetector()
+        code = "\n".join([f"line {i}" for i in range(100)])  # 100 lines
+
+        result = detector.should_attach(code)
+
+        assert result is False, "Exactly 100 lines should be inline (< ATTACH_MIN)"
+
+    def test_get_display_mode_returns_inline(self):
+        """get_display_mode should return 'inline' for short code."""
+        detector = LengthDetector()
+        code = "x = 1\ny = 2"
+
+        result = detector.get_display_mode(code)
+
+        assert result == "inline", "Short code should have 'inline' mode"
+
+    def test_get_display_mode_returns_attachment(self):
+        """get_display_mode should return 'attachment' for long code."""
+        detector = LengthDetector()
+        code = "\n".join([f"line {i}" for i in range(101)])
+
+        result = detector.get_display_mode(code)
+
+        assert result == "attachment", "Long code should have 'attachment' mode"
+
+    def test_should_attach_handles_empty_string(self):
+        """Empty string should not trigger attachment."""
+        detector = LengthDetector()
+
+        result = detector.should_attach("")
+
+        assert result is False, "Empty code should be inline (not attached)"
+
+    def test_should_attach_handles_single_line(self):
+        """Single line code should display inline."""
+        detector = LengthDetector()
+        code = "print('hello')"
+
+        result = detector.should_attach(code)
+
+        assert result is False, "Single line should be inline"
