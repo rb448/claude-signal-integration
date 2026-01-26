@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 2 of 10 (Session Management & Durable Execution)
-Plan: 1 of 4 in phase (just completed 02-01-PLAN.md)
+Plan: 3 of 4 in phase (just completed 02-03-PLAN.md)
 Status: In progress
-Last activity: 2026-01-26 — Completed 02-01-PLAN.md (Session Persistence with SQLite)
+Last activity: 2026-01-26 — Completed 02-03-PLAN.md (Claude Code Subprocess Management)
 
-Progress: █████░░░░░ 50%
+Progress: ███████░░░ 70%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 8.2 min
-- Total execution time: 0.68 hours
+- Total plans completed: 6
+- Average duration: 7.2 min
+- Total execution time: 0.72 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
-| 2 - Session Management | 1/4 | 3min | 3min |
+| 2 - Session Management | 2/4 | 6min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 23min (01-02), 6min (01-03), 4min (01-04), 3min (02-01)
-- Trend: Strong acceleration with TDD methodology
+- Last 5 plans: 6min (01-03), 4min (01-04), 3min (02-01), 3min (02-03)
+- Trend: Sustained fast execution with established patterns
 
 ## Accumulated Context
 
@@ -61,6 +61,9 @@ Recent decisions affecting current work:
 | Session context as JSON blob | 02-01 | Context structure will evolve with conversation features | No schema migrations needed, flexible storage |
 | UUID4 for session IDs | 02-01 | Prevents collisions in concurrent session creation | Globally unique IDs, no coordination required |
 | UTC-aware datetime.now(UTC) | 02-01 | datetime.utcnow() deprecated in Python 3.12+ | Future-proof timestamps, zero warnings |
+| asyncio.create_subprocess_exec for subprocesses | 02-03 | Prevents shell injection by separating command and args | Safe subprocess spawning, no injection vulnerabilities |
+| Graceful shutdown: SIGTERM → SIGKILL | 02-03 | Give processes time to clean up (5s) but force kill if hung | Reliable cleanup, no zombie processes |
+| Working directory isolation via cwd parameter | 02-03 | Each session operates in own project without cross-contamination | Concurrent sessions fully isolated |
 
 ### Pending Todos
 
@@ -72,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-26 02:00
-Stopped at: Completed 02-01-PLAN.md - Session Persistence (Phase 2 started, TDD foundation established)
-Resume file: None (Ready for 02-02-PLAN.md - Session State Machine)
+Last session: 2026-01-26 02:06
+Stopped at: Completed 02-03-PLAN.md - Claude Code Subprocess Management (Process isolation established)
+Resume file: None (Ready for 02-04-PLAN.md - Message Routing)
