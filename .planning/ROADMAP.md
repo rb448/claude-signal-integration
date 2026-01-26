@@ -162,10 +162,15 @@ Plans:
     7. Write failing tests for persistence (save → restart → load → verify)
     8. Implement persistence to pass tests
 **Research**: Unlikely (standard process isolation patterns)
-**Plans**: TBD
+**Plans**: 5 plans
+**Completed**: 2026-01-26
 
 Plans:
-- [ ] 04-01: TBD during phase planning
+- [x] 04-01: Thread-to-project mapping persistence (SQLite + ThreadMapper)
+- [x] 04-02: Thread command interface (/thread map/list/unmap/help)
+- [x] 04-03: Daemon integration & command routing
+- [x] 04-04: Session creation with thread mapping validation
+- [x] 04-05: Daemon startup with thread mapper initialization
 
 ### Phase 5: Permission & Approval Workflows
 **Goal**: Safe delegation with approval gates for destructive operations
@@ -414,8 +419,8 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 |-------|----------------|--------|-----------|
 | 1. Core Infrastructure | 4/4 | Complete | 2026-01-25 |
 | 2. Session Management | 7/7 | Complete | 2026-01-26 |
-| 3. Claude Integration | 0/TBD | Not started | - |
-| 4. Multi-Project | 0/TBD | Not started | - |
+| 3. Claude Integration | 5/5 | Complete | 2026-01-26 |
+| 4. Multi-Project | 5/5 | Complete | 2026-01-26 |
 | 5. Permissions | 0/TBD | Not started | - |
 | 6. Code Display | 0/TBD | Not started | - |
 | 7. Connection Resilience | 0/TBD | Not started | - |

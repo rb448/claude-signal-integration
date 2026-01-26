@@ -163,11 +163,11 @@ Which phases cover which requirements. Updated by create-roadmap.
 | CLDE-04 | Phase 3 | Complete |
 | CLDE-05 | Phase 3 | Complete |
 | CLDE-06 | Phase 3 | Complete |
-| PROJ-01 | Phase 4 | Pending |
-| PROJ-02 | Phase 4 | Pending |
-| PROJ-03 | Phase 4 | Pending |
-| PROJ-04 | Phase 4 | Pending |
-| PROJ-05 | Phase 4 | Pending |
+| PROJ-01 | Phase 4 | Complete |
+| PROJ-02 | Phase 4 | Complete |
+| PROJ-03 | Phase 4 | Complete |
+| PROJ-04 | Phase 4 | Complete |
+| PROJ-05 | Phase 4 | Complete |
 | PERM-01 | Phase 5 | Pending |
 | PERM-02 | Phase 5 | Pending |
 | PERM-03 | Phase 5 | Pending |

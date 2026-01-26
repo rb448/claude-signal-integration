@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** Enable complete Claude Code functionality from mobile without requiring GitHub repos - users can continue development work with local directories while away from their desk.
-**Current focus:** Phase 4 — Multi-Project Support
+**Current focus:** Phase 5 — Permission & Approval Workflows
 
 ## Current Position
 
-Phase: 4 of 10 (Multi-Project Support)
-Plan: 5 of 5 in phase (complete)
-Status: Phase complete
-Last activity: 2026-01-26 — Completed 04-05-PLAN.md (Daemon Startup Persistence)
+Phase: 5 of 10 (Permission & Approval Workflows)
+Plan: Ready for planning
+Status: Phase 4 complete, Phase 5 not planned yet
+Last activity: 2026-01-26 — Completed Phase 4 (Multi-Project Support)
 
-Progress: █████░░░░░ 100% (Phase 4: 5/5 plans complete)
+Progress: ████████░░ 40% (4 of 10 phases complete)
 
 ## Performance Metrics
 
