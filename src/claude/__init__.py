@@ -1,5 +1,6 @@
-"""Claude Code subprocess management."""
+"""Claude Code CLI integration."""
 
-from .process import ClaudeProcess
+from src.claude.bridge import CLIBridge
+from src.claude.process import ClaudeProcess
 
-__all__ = ["ClaudeProcess"]
+__all__ = ["CLIBridge", "ClaudeProcess"]
