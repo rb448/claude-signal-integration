@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 2 of 10 (Session Management & Durable Execution)
-Plan: 3 of 4 in phase (just completed 02-03-PLAN.md)
-Status: In progress
-Last activity: 2026-01-26 — Completed 02-03-PLAN.md (Claude Code Subprocess Management)
+Plan: 4 of 4 in phase (just completed 02-04-PLAN.md)
+Status: Phase complete
+Last activity: 2026-01-26 — Completed 02-04-PLAN.md (Crash Recovery)
 
-Progress: ███████░░░ 70%
+Progress: ████████░░ 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 7.2 min
-- Total execution time: 0.72 hours
+- Total plans completed: 8
+- Average duration: 6.0 min
+- Total execution time: 0.8 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
-| 2 - Session Management | 2/4 | 6min | 3min |
+| 2 - Session Management | 4/4 | 10min | 2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 6min (01-03), 4min (01-04), 3min (02-01), 3min (02-03)
-- Trend: Sustained fast execution with established patterns
+- Last 5 plans: 4min (01-04), 3min (02-01), 3min (02-03), 4min (02-04)
+- Trend: Excellent velocity with TDD - Phase 2 averaged 2.5min/plan (4x faster than Phase 1)
 
 ## Accumulated Context
 
@@ -68,6 +68,10 @@ Recent decisions affecting current work:
 | asyncio.create_subprocess_exec for subprocesses | 02-03 | Prevents shell injection by separating command and args | Safe subprocess spawning, no injection vulnerabilities |
 | Graceful shutdown: SIGTERM → SIGKILL | 02-03 | Give processes time to clean up (5s) but force kill if hung | Reliable cleanup, no zombie processes |
 | Working directory isolation via cwd parameter | 02-03 | Each session operates in own project without cross-contamination | Concurrent sessions fully isolated |
+| Crash detection via ACTIVE sessions | 02-04 | ACTIVE status means daemon crashed before clean shutdown | Simple, reliable detection without OS process tracking |
+| Use SessionLifecycle.transition() for recovery | 02-04 | Preserves state machine validation rules | Maintains state integrity, two DB updates acceptable |
+| recovered_at timestamp in context | 02-04 | Provides audit trail for crash recovery events | Enables user notification and debugging |
+| Idempotent recovery design | 02-04 | Safe to run on every daemon startup | No risk of double-recovery or corrupted state |
 
 ### Pending Todos
 
@@ -79,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-26 02:06
-Stopped at: Completed 02-03-PLAN.md - Claude Code Subprocess Management (Process isolation established)
-Resume file: None (Ready for 02-04-PLAN.md - Message Routing)
+Last session: 2026-01-26 02:12
+Stopped at: Completed 02-04-PLAN.md - Crash Recovery (Phase 2 complete: Session Management & Durable Execution)
+Resume file: None (Phase 2 complete - ready for next phase)
