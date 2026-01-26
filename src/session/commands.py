@@ -156,8 +156,13 @@ class SessionCommands:
 
         # Spawn Claude process if not already running
         if session_id not in self.processes:
+            # Extract conversation history from session context
+            # conversation_history extracted from session.context (populated by SessionManager)
+            # Phase 3 will implement actual restoration to Claude Code CLI
+            conversation_history = session.context.get("conversation_history", {})
+
             process = self.process_factory(session_id, session.project_path)
-            await process.start()
+            await process.start(conversation_history=conversation_history)
             self.processes[session_id] = process
 
         return f"Resumed session {session_id}"
