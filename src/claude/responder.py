@@ -5,6 +5,10 @@ import time
 from typing import List
 
 from .parser import ParsedOutput, ToolCall, Progress, Error, Response
+from .code_formatter import CodeFormatter, LengthDetector
+from .syntax_highlighter import SyntaxHighlighter
+from .diff_processor import DiffParser, SummaryGenerator
+from .diff_renderer import DiffRenderer
 
 
 class SignalResponder:
@@ -23,6 +27,22 @@ class SignalResponder:
     # Emoji constants for status messages
     PROGRESS_EMOJI = "⏳"
     ERROR_EMOJI = "❌"
+
+    def __init__(self, signal_api_url: str = "http://localhost:8080"):
+        """
+        Initialize SignalResponder with code display components.
+
+        Args:
+            signal_api_url: Signal API URL for attachments (unused in basic formatting)
+        """
+        # Code display components
+        self.code_formatter = CodeFormatter()
+        self.syntax_highlighter = SyntaxHighlighter()
+        self.length_detector = LengthDetector()
+        self.diff_parser = DiffParser()
+        self.diff_renderer = DiffRenderer()
+        self.summary_generator = SummaryGenerator()
+        self.signal_api_url = signal_api_url
 
     def format(self, parsed: ParsedOutput) -> str:
         """
@@ -69,8 +89,63 @@ class SignalResponder:
         return f"{self.ERROR_EMOJI} Error: {error.message}"
 
     def _format_response(self, response: Response) -> str:
-        """Format a response as plain text."""
-        return response.text
+        """Format a response with code/diff detection and formatting."""
+        return self._format_response_with_code(response.text)
+
+    def _format_response_with_code(self, content: str) -> str:
+        """Format response with code/diff detection and formatting."""
+        # Detect git diff output (highest priority - most structured)
+        if self._is_diff(content):
+            return self._format_diff(content)
+
+        # Detect code blocks ```language...```
+        if "```" in content:
+            return self._format_code_blocks(content)
+
+        # Plain text - no special formatting
+        return content
+
+    def _is_diff(self, content: str) -> bool:
+        """Check if content is git diff output."""
+        return content.strip().startswith("diff --git")
+
+    def _format_diff(self, content: str) -> str:
+        """Format git diff with summary and rendering."""
+        # Parse diff
+        file_diffs = self.diff_parser.parse(content)
+
+        if not file_diffs:
+            # Parsing failed, return as-is
+            return content
+
+        # Generate plain-English summary
+        summary = self.summary_generator.generate(file_diffs)
+
+        # Render diff
+        rendered = self.diff_renderer.render(file_diffs)
+
+        return f"**Changes:**\n{summary}\n\n{rendered}"
+
+    def _format_code_blocks(self, content: str) -> str:
+        """Format embedded code blocks."""
+        # Find all code blocks: ```language\ncode\n```
+        pattern = r'```(\w+)?\n(.*?)\n```'
+
+        def replace_code(match):
+            language = match.group(1)
+            code = match.group(2)
+
+            # Check length - attachment vs inline
+            if self.length_detector.should_attach(code):
+                line_count = code.count('\n') + 1
+                return f"[Code too long ({line_count} lines) - attachment coming...]"
+
+            # Format and highlight for inline display
+            formatted = self.code_formatter.format_code(code, language)
+            highlighted = self.syntax_highlighter.highlight(formatted, language)
+            return f"```\n{highlighted}\n```"
+
+        return re.sub(pattern, replace_code, content, flags=re.DOTALL)
 
     def split_for_signal(self, text: str, max_len: int = 1600) -> List[str]:
         """

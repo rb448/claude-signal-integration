@@ -204,9 +204,9 @@ class TestCodeDisplayIntegration:
             text="Here's the code:\n```python\ndef hello():\n    print('world')\n```"
         )
         result = responder.format(response)
-        # Should contain formatted code with highlighting
+        # Should contain formatted code with highlighting (ANSI codes)
         assert "```" in result
-        assert "def hello" in result
+        assert "hello" in result  # Function name present (may have ANSI codes)
 
     def test_formats_code_with_formatter(self):
         """Code blocks get formatted for mobile width."""
