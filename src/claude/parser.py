@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional
+from typing import Generator, Optional
 
 
 class OutputType(Enum):
@@ -130,3 +130,48 @@ class OutputParser:
             type=OutputType.RESPONSE,
             text=line
         )
+
+
+class StreamingParser:
+    """Parse streaming Claude CLI output that may arrive in chunks."""
+
+    def __init__(self):
+        """Initialize streaming parser."""
+        self.parser = OutputParser()
+        self.buffer = ""
+
+    def feed(self, chunk: str) -> Generator[ParsedOutput, None, None]:
+        """
+        Feed a chunk of output and yield complete parsed lines.
+
+        Args:
+            chunk: A chunk of CLI output (may contain partial lines)
+
+        Yields:
+            ParsedOutput: Structured representation of complete lines
+        """
+        # Add chunk to buffer
+        self.buffer += chunk
+
+        # Split by newlines
+        lines = self.buffer.split("\n")
+
+        # Keep the last incomplete line in buffer
+        self.buffer = lines[-1]
+
+        # Parse and yield complete lines
+        for line in lines[:-1]:
+            yield self.parser.parse(line)
+
+    def flush(self) -> Optional[ParsedOutput]:
+        """
+        Parse and return any remaining buffered content.
+
+        Returns:
+            ParsedOutput if buffer is non-empty, None otherwise
+        """
+        if self.buffer:
+            result = self.parser.parse(self.buffer)
+            self.buffer = ""
+            return result
+        return None
