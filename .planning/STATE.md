@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 2 of 10 (Session Management & Durable Execution)
-Plan: 4 of 4 in phase (just completed 02-04-PLAN.md)
+Plan: 5 of 5 in phase (just completed 02-05-PLAN.md)
 Status: Phase complete
-Last activity: 2026-01-26 — Completed 02-04-PLAN.md (Crash Recovery)
+Last activity: 2026-01-26 — Completed 02-05-PLAN.md (Session Commands Integration)
 
-Progress: ████████░░ 80%
+Progress: █████████░ 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 6.0 min
+- Total plans completed: 9
+- Average duration: 5.3 min
 - Total execution time: 0.8 hours
 
 **By Phase:**
@@ -28,11 +28,11 @@ Progress: ████████░░ 80%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
-| 2 - Session Management | 4/4 | 10min | 2.5min |
+| 2 - Session Management | 5/5 | 16min | 3.2min |
 
 **Recent Trend:**
-- Last 5 plans: 4min (01-04), 3min (02-01), 3min (02-03), 4min (02-04)
-- Trend: Excellent velocity with TDD - Phase 2 averaged 2.5min/plan (4x faster than Phase 1)
+- Last 5 plans: 3min (02-01), 3min (02-02), 3min (02-03), 4min (02-04), 6min (02-05)
+- Trend: Excellent velocity with TDD - Phase 2 averaged 3.2min/plan (3x faster than Phase 1)
 
 ## Accumulated Context
 
@@ -72,6 +72,11 @@ Recent decisions affecting current work:
 | Use SessionLifecycle.transition() for recovery | 02-04 | Preserves state machine validation rules | Maintains state integrity, two DB updates acceptable |
 | recovered_at timestamp in context | 02-04 | Provides audit trail for crash recovery events | Enables user notification and debugging |
 | Idempotent recovery design | 02-04 | Safe to run on every daemon startup | No risk of double-recovery or corrupted state |
+| Factory function for ClaudeProcess creation | 02-05 | Enables easy mocking in tests without complex DI | Clean test isolation, processes mocked per session |
+| Truncate session IDs to 8 chars in list | 02-05 | Full UUIDs (36 chars) don't fit mobile screens | User-friendly display, 8 chars sufficient |
+| Path validation before session creation | 02-05 | Fail fast if project directory doesn't exist | Clear error messages, prevents invalid sessions |
+| Crash recovery runs before Signal connect | 02-05 | Sessions recovered before processing messages | Consistent state on startup |
+| Process lifecycle tracked in dict | 02-05 | Need to track running processes for cleanup | Prevents zombie processes on stop |
 
 ### Pending Todos
 
@@ -83,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-26 02:12
-Stopped at: Completed 02-04-PLAN.md - Crash Recovery (Phase 2 complete: Session Management & Durable Execution)
-Resume file: None (Phase 2 complete - ready for next phase)
+Last session: 2026-01-26 02:22
+Stopped at: Completed 02-05-PLAN.md - Session Commands Integration (Phase 2 complete: all 5 plans done)
+Resume file: None (Phase 2 complete - ready for Phase 3: Message Routing)
