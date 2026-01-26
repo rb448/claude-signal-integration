@@ -43,13 +43,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Permission & Approval System
 
-- [ ] **PERM-01**: System detects destructive operations (file edits, deletions, git push)
-- [ ] **PERM-02**: System sends approval request with operation context before executing
-- [ ] **PERM-03**: User receives push notification for pending approval requests
-- [ ] **PERM-04**: User can approve operation via Signal message
-- [ ] **PERM-05**: User can reject operation via Signal message
-- [ ] **PERM-06**: System handles approval timeout (10 minutes) by pausing work and notifying user
-- [ ] **PERM-07**: User can approve all operations in a batch with single command
+- [x] **PERM-01**: System detects destructive operations (file edits, deletions, git push)
+- [x] **PERM-02**: System sends approval request with operation context before executing
+- [x] **PERM-03**: User receives push notification for pending approval requests
+- [x] **PERM-04**: User can approve operation via Signal message
+- [x] **PERM-05**: User can reject operation via Signal message
+- [x] **PERM-06**: System handles approval timeout (10 minutes) by pausing work and notifying user
+- [x] **PERM-07**: User can approve all operations in a batch with single command
 
 ### Code Display System
 
@@ -168,13 +168,13 @@ Which phases cover which requirements. Updated by create-roadmap.
 | PROJ-03 | Phase 4 | Complete |
 | PROJ-04 | Phase 4 | Complete |
 | PROJ-05 | Phase 4 | Complete |
-| PERM-01 | Phase 5 | Pending |
-| PERM-02 | Phase 5 | Pending |
-| PERM-03 | Phase 5 | Pending |
-| PERM-04 | Phase 5 | Pending |
-| PERM-05 | Phase 5 | Pending |
-| PERM-06 | Phase 5 | Pending |
-| PERM-07 | Phase 5 | Pending |
+| PERM-01 | Phase 5 | Complete |
+| PERM-02 | Phase 5 | Complete |
+| PERM-03 | Phase 5 | Complete |
+| PERM-04 | Phase 5 | Complete |
+| PERM-05 | Phase 5 | Complete |
+| PERM-06 | Phase 5 | Complete |
+| PERM-07 | Phase 5 | Complete |
 | CODE-01 | Phase 6 | Pending |
 | CODE-02 | Phase 6 | Pending |
 | CODE-03 | Phase 6 | Pending |
