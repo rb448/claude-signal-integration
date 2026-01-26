@@ -182,6 +182,9 @@ class ServiceDaemon:
             # Create thread commands (requires initialized mapper)
             self.thread_commands = ThreadCommands(self.thread_mapper)
 
+            # Wire thread commands into session commands
+            self.session_commands.thread_commands = self.thread_commands
+
             # Run crash recovery
             recovered = await self.crash_recovery.recover()
             if recovered:
