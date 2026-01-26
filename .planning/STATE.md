@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** Enable complete Claude Code functionality from mobile without requiring GitHub repos - users can continue development work with local directories while away from their desk.
-**Current focus:** Phase 2 — Session Management & Durable Execution
+**Current focus:** Phase 3 — Claude Code Integration
 
 ## Current Position
 
-Phase: 2 of 10 (Session Management & Durable Execution)
-Plan: 7 of 7 in phase (completed)
-Status: Phase verified and complete
-Last activity: 2026-01-26 — Phase 2 execution complete, all must-haves verified
+Phase: 3 of 10 (Claude Code Integration)
+Plan: 2 of 3 in phase (completed)
+Status: In progress
+Last activity: 2026-01-26 — Completed 03-02-PLAN.md (Output Parser)
 
-Progress: ██████████ 100% (Phase 2 complete)
+Progress: ████████░░ 67% (Phase 3: 2/3 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 4.5 min
-- Total execution time: 0.8 hours
+- Total plans completed: 13
+- Average duration: 4.0 min
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: ██████████ 100% (Phase 2 complete)
 |-------|-------|-------|----------|
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
 | 2 - Session Management | 7/7 | 19min | 2.7min |
+| 3 - Claude Integration | 2/3 | 5min | 2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 3min (02-03), 4min (02-04), 6min (02-05), 1min (02-06), 2min (02-07)
-- Trend: Excellent velocity - Phase 2 averaged 2.7min/plan (gap closure plans extremely fast)
+- Last 5 plans: 6min (02-05), 1min (02-06), 2min (02-07), 2min (03-01), 3min (03-02)
+- Trend: Excellent velocity maintained - Phase 3 averaging 2.5min/plan
 
 ## Accumulated Context
 
@@ -81,6 +82,10 @@ Recent decisions affecting current work:
 | Truncate session IDs to 8 chars in notifications | 02-06 | Matches /session list format, mobile-friendly | Consistent user experience across all session displays |
 | Conversation history parameter added but not used | 02-07 | Phase 2 focused on session persistence, not Claude CLI integration | Parameter wired through system, restoration deferred to Phase 3 |
 | Conversation history stored in session.context | 02-07 | session.context JSON blob already exists, no schema changes needed | Phase 3 can call update_context() without refactoring session layer |
+| Dataclasses with __post_init__ for type assignment | 03-02 | Each ParsedOutput subclass sets its type in __post_init__ | Clean API: ToolCall(tool="Read", target="file.py") without passing type |
+| Regex patterns as class constants | 03-02 | TOOL_CALL_PATTERN, BASH_PATTERN, ERROR_PATTERN compiled once | Performance: patterns compiled once, reused for all parse() calls |
+| Generator-based feed() for streaming | 03-02 | Yields ParsedOutput as complete lines arrive | Caller can process results incrementally without waiting for stream end |
+| Buffer incomplete lines in StreamingParser | 03-02 | Handles chunks that break mid-line | Enables realistic streaming where network chunks don't align with line boundaries |
 
 ### Pending Todos
 
@@ -93,5 +98,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Phase 2 execution complete - all 7 plans done, verified (5/5 must-haves pass)
-Resume file: None (Phase 2 fully complete - ready to plan Phase 3: Claude Code Integration)
+Stopped at: Completed 03-02-PLAN.md (Output Parser) - 2/3 plans in Phase 3 complete
+Resume file: None
