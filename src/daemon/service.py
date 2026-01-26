@@ -18,6 +18,10 @@ from ..claude.orchestrator import ClaudeOrchestrator
 from ..claude.parser import OutputParser
 from ..claude.responder import SignalResponder
 from ..thread import ThreadMapper, ThreadCommands
+from ..approval.detector import OperationDetector
+from ..approval.manager import ApprovalManager
+from ..approval.workflow import ApprovalWorkflow
+from ..approval.commands import ApprovalCommands
 
 logger = structlog.get_logger(__name__)
 
@@ -61,6 +65,14 @@ class ServiceDaemon:
         data_dir = Path.home() / "Library" / "Application Support" / "claude-signal-bot"
         thread_db_path = data_dir / "thread_mappings.db"
         self.thread_mapper = ThreadMapper(str(thread_db_path))
+
+        # Approval system
+        self.approval_detector = OperationDetector()
+        self.approval_manager = ApprovalManager()
+        self.approval_workflow = ApprovalWorkflow(
+            detector=self.approval_detector,
+            manager=self.approval_manager
+        )
 
         # Claude integration components
         self.output_parser = OutputParser()
