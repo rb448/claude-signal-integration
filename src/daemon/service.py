@@ -180,6 +180,16 @@ class ServiceDaemon:
             await self.thread_mapper.initialize()
             logger.info("thread_mapper_initialized")
 
+            # Load and log thread mappings
+            mappings = await self.thread_mapper.list_all()
+            if mappings:
+                logger.info(
+                    "thread_mappings_loaded",
+                    thread_count=len(mappings)
+                )
+            else:
+                logger.info("no_thread_mappings_configured")
+
             # Create thread commands (requires initialized mapper)
             self.thread_commands = ThreadCommands(self.thread_mapper)
 
