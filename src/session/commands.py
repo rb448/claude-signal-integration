@@ -223,6 +223,10 @@ class SessionCommands:
             await process.start(conversation_history=conversation_history)
             self.processes[session_id] = process
 
+            # Wire orchestrator bridge so commands can execute
+            if self.orchestrator:
+                self.orchestrator.bridge = process.get_bridge()
+
         # Map thread to session
         self.thread_sessions[thread_id] = session_id
 
