@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 4 of 10 (Multi-Project Support)
-Plan: 1 of 4 in phase (in progress)
+Plan: 2 of 4 in phase (in progress)
 Status: In progress
-Last activity: 2026-01-26 — Completed 04-01-PLAN.md (Thread-to-Project Mapping Storage)
+Last activity: 2026-01-26 — Completed 04-02-PLAN.md (Thread Command Interface)
 
-Progress: ██░░░░░░░░ 25% (Phase 4: 1/4 plans complete)
+Progress: ██░░░░░░░░ 50% (Phase 4: 2/4 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 3.5 min
-- Total execution time: 1.1 hours
+- Total plans completed: 18
+- Average duration: 3.4 min
+- Total execution time: 1.2 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: ██░░░░░░░░ 25% (Phase 4: 1/4 plans complete)
 | 1 - Core Infrastructure | 4/4 | 38min | 9.5min |
 | 2 - Session Management | 7/7 | 19min | 2.7min |
 | 3 - Claude Integration | 5/5 | 15.5min | 3.1min |
-| 4 - Multi-Project Support | 1/4 | 2min | 2.0min |
+| 4 - Multi-Project Support | 2/4 | 4.75min | 2.4min |
 
 **Recent Trend:**
-- Last 5 plans: 3min (03-02), 3.5min (03-03), 5min (03-04), 2min (03-05), 2min (04-01)
-- Trend: Excellent velocity - Phase 4 started strong with 2min for TDD thread mapping storage
+- Last 5 plans: 3.5min (03-03), 5min (03-04), 2min (03-05), 2min (04-01), 2.75min (04-02)
+- Trend: Consistent 2-3min execution for TDD plans - Phase 4 maintaining excellent velocity
 
 ## Accumulated Context
 
@@ -104,6 +104,10 @@ Recent decisions affecting current work:
 | Idempotent unmap operation | 04-01 | unmap() doesn't raise error if thread not mapped | Enables safe retry logic, simpler error handling in higher layers |
 | Reverse lookup index on project_path | 04-01 | CREATE INDEX for bidirectional queries | Efficient "which thread is working on this project?" lookups |
 | ThreadMappingError for all validation failures | 04-01 | Single exception type for path missing, duplicate thread, duplicate path | Simpler exception handling, descriptive error messages |
+| Follow SessionCommands pattern for ThreadCommands | 04-02 | Consistent user experience across /session and /thread commands | Same handle() routing structure, same help format |
+| Truncate thread_ids to 8 chars in thread messages | 04-02 | Mobile screens can't display full UUIDs, 8 chars sufficient | Matches /session list display format from Phase 2-5 |
+| Validate paths before mapper.map() | 04-02 | Provide clear "Path does not exist" error before database operations | Better error messages, fail fast on user input errors |
+| Include persistence note in /thread help | 04-02 | Users need to know mappings survive daemon restarts | Help text clarifies mapping lifetime expectations |
 
 ### Pending Todos
 
@@ -116,5 +120,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 04-01-PLAN.md (Thread-to-Project Mapping Storage) - Phase 4 started (1/4 plans)
+Stopped at: Completed 04-02-PLAN.md (Thread Command Interface) - Phase 4 50% complete (2/4 plans)
 Resume file: None
