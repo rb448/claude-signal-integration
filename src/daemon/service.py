@@ -12,6 +12,8 @@ from aiohttp import web
 from ..auth.phone_verifier import PhoneVerifier
 from ..signal.client import SignalClient
 from ..signal.queue import MessageQueue
+from ..session import SessionManager, SessionLifecycle, CrashRecovery, SessionCommands
+from ..claude import ClaudeProcess
 
 logger = structlog.get_logger(__name__)
 
@@ -35,6 +37,16 @@ class ServiceDaemon:
         self._shutdown_event = asyncio.Event()
         self._health_app: Optional[web.Application] = None
         self._health_runner: Optional[web.AppRunner] = None
+
+        # Session management components
+        self.session_manager = SessionManager()
+        self.session_lifecycle = SessionLifecycle(self.session_manager)
+        self.crash_recovery = CrashRecovery(self.session_manager, self.session_lifecycle)
+        self.session_commands = SessionCommands(
+            self.session_manager,
+            self.session_lifecycle,
+            lambda sid, path: ClaudeProcess(sid, path)
+        )
 
     async def _health_check_handler(self, request: web.Request) -> web.Response:
         """Health check endpoint handler.
@@ -91,9 +103,11 @@ class ServiceDaemon:
         Args:
             message: Message data to process
         """
-        # Extract sender phone number from message
+        # Extract sender phone number and message text from message
         # Message format depends on signal-cli-rest-api protocol
         sender = message.get("sender", message.get("source", ""))
+        text = message.get("message", message.get("text", ""))
+        thread_id = message.get("thread_id", sender)  # Use sender as thread_id if not provided
 
         # Verify sender is authorized
         if not self.phone_verifier.verify(sender):
@@ -104,6 +118,15 @@ class ServiceDaemon:
             )
             return
 
+        # Route /session commands
+        if text.startswith("/session"):
+            logger.info("routing_session_command", sender=sender, command=text)
+            response = await self.session_commands.handle(thread_id, text)
+            # Send response back to user
+            # TODO: Implement signal_client.send_message() when available
+            logger.info("session_command_response", response=response)
+            return
+
         # Process authorized message
         logger.info(
             "message_processing_authorized",
@@ -111,7 +134,7 @@ class ServiceDaemon:
             message=message
         )
 
-        # Placeholder for command handling logic
+        # Placeholder for other command handling logic
         # Will be expanded in future phases with Claude API integration
         logger.debug("message_received", message=message)
 
@@ -129,6 +152,24 @@ class ServiceDaemon:
         try:
             # Setup signal handlers for graceful shutdown
             self._setup_signal_handlers()
+
+            # Initialize session manager
+            await self.session_manager.initialize()
+            logger.info("session_manager_initialized")
+
+            # Run crash recovery
+            recovered = await self.crash_recovery.recover()
+            if recovered:
+                logger.warning(
+                    "sessions_recovered",
+                    count=len(recovered),
+                    session_ids=recovered
+                )
+                # TODO: Send Signal notification to authorized user about recovered sessions
+                # await self.signal_client.send_message(
+                #     self.phone_verifier.authorized_number,
+                #     f"⚠️ Recovered {len(recovered)} sessions after restart"
+                # )
 
             # Start health check endpoint
             await self._start_health_server()
@@ -184,6 +225,10 @@ class ServiceDaemon:
 
             # Stop health check endpoint
             await self._stop_health_server()
+
+            # Close session manager database connection
+            await self.session_manager.close()
+            logger.info("session_manager_closed")
 
             logger.info("daemon_stopped")
 
