@@ -69,7 +69,8 @@ class ServiceDaemon:
             self.session_manager,
             self.session_lifecycle,
             lambda sid, path: ClaudeProcess(sid, path),
-            claude_orchestrator=self.claude_orchestrator
+            claude_orchestrator=self.claude_orchestrator,
+            thread_mapper=self.thread_mapper
         )
 
     async def _health_check_handler(self, request: web.Request) -> web.Response:
