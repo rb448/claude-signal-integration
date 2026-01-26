@@ -435,3 +435,58 @@ async def test_start_sets_orchestrator_bridge():
 
     # Verify it's the process's bridge
     assert orchestrator.bridge is mock_bridge, "orchestrator.bridge should reference process bridge"
+
+
+@pytest.mark.asyncio
+async def test_resume_sets_orchestrator_bridge():
+    """Test that _resume() wires orchestrator bridge to enable command execution."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+    orchestrator = MagicMock(spec=ClaudeOrchestrator)
+
+    # Mock paused session
+    paused_session = Session(
+        id="session-1",
+        project_path="/tmp/project",
+        thread_id="thread-1",
+        status=SessionStatus.PAUSED,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    manager.get.return_value = paused_session
+
+    # Mock transition to ACTIVE
+    active_session = Session(
+        id="session-1",
+        project_path="/tmp/project",
+        thread_id="thread-1",
+        status=SessionStatus.ACTIVE,
+        context={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    lifecycle.transition.return_value = active_session
+
+    # Mock process
+    mock_process = AsyncMock(spec=ClaudeProcess)
+    mock_bridge = MagicMock()
+    mock_process.get_bridge.return_value = mock_bridge
+    process_factory.return_value = mock_process
+
+    # Create commands handler with orchestrator
+    commands = SessionCommands(manager, lifecycle, process_factory, orchestrator)
+
+    # Clear orchestrator bridge to simulate fresh daemon state
+    orchestrator.bridge = None
+
+    # Resume session
+    await commands.handle("thread-1", "/session resume session-1")
+
+    # Verify bridge is set (not None)
+    assert orchestrator.bridge is not None, "orchestrator.bridge should be set after _resume()"
+
+    # Verify it's the process's bridge
+    assert orchestrator.bridge is mock_bridge, "orchestrator.bridge should reference process bridge"
