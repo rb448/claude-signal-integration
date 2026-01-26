@@ -335,9 +335,13 @@ class TestAttachmentIntegration:
         responder.attachment_handler = AsyncMock()
         responder.attachment_handler.send_code_file = AsyncMock(return_value="12345")
 
-        # Message with attachment marker
-        formatted = "[Code too long (150 lines) - attachment coming...]"
-        code_blocks = [("line 0\nline 1\n" * 75, "example.py")]
+        # Create code with known line count
+        code = "line 0\nline 1\n" * 75  # 150 newlines = 151 lines
+        line_count = code.count('\n') + 1
+
+        # Message with attachment marker matching actual line count
+        formatted = f"[Code too long ({line_count} lines) - attachment coming...]"
+        code_blocks = [(code, "example.py")]
 
         result = await responder.send_with_attachments(
             formatted, code_blocks, "+1234567890"
@@ -348,7 +352,7 @@ class TestAttachmentIntegration:
 
         # Should update message with confirmation
         assert "📎 Sent example.py" in result
-        assert "150 lines" in result
+        assert f"{line_count} lines" in result
         assert "attachment coming" not in result
 
     @pytest.mark.asyncio
@@ -383,15 +387,21 @@ class TestAttachmentIntegration:
         responder.attachment_handler = AsyncMock()
         responder.attachment_handler.send_code_file = AsyncMock(return_value="12345")
 
-        formatted = """First file:
-[Code too long (150 lines) - attachment coming...]
+        # Create code blocks with known line counts
+        code1 = "code1\n" * 149  # 149 newlines = 150 lines
+        code2 = "code2\n" * 199  # 199 newlines = 200 lines
+        line_count1 = code1.count('\n') + 1
+        line_count2 = code2.count('\n') + 1
+
+        formatted = f"""First file:
+[Code too long ({line_count1} lines) - attachment coming...]
 
 Second file:
-[Code too long (200 lines) - attachment coming...]"""
+[Code too long ({line_count2} lines) - attachment coming...]"""
 
         code_blocks = [
-            ("code1" * 50, "file1.py"),
-            ("code2" * 100, "file2.js")
+            (code1, "file1.py"),
+            (code2, "file2.js")
         ]
 
         result = await responder.send_with_attachments(

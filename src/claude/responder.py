@@ -9,6 +9,7 @@ from .code_formatter import CodeFormatter, LengthDetector
 from .syntax_highlighter import SyntaxHighlighter
 from .diff_processor import DiffParser, SummaryGenerator
 from .diff_renderer import DiffRenderer
+from ..signal.attachment_handler import AttachmentHandler
 
 
 class SignalResponder:
@@ -33,7 +34,7 @@ class SignalResponder:
         Initialize SignalResponder with code display components.
 
         Args:
-            signal_api_url: Signal API URL for attachments (unused in basic formatting)
+            signal_api_url: Signal API URL for attachments
         """
         # Code display components
         self.code_formatter = CodeFormatter()
@@ -42,6 +43,7 @@ class SignalResponder:
         self.diff_parser = DiffParser()
         self.diff_renderer = DiffRenderer()
         self.summary_generator = SummaryGenerator()
+        self.attachment_handler = AttachmentHandler(signal_api_url)
         self.signal_api_url = signal_api_url
 
     def format(self, parsed: ParsedOutput) -> str:
@@ -146,6 +148,41 @@ class SignalResponder:
             return f"```\n{highlighted}\n```"
 
         return re.sub(pattern, replace_code, content, flags=re.DOTALL)
+
+    async def send_with_attachments(
+        self,
+        formatted_message: str,
+        code_blocks: List[tuple[str, str]],
+        recipient: str
+    ) -> str:
+        """
+        Upload code attachments and update message with attachment confirmations.
+
+        Args:
+            formatted_message: Message with [attachment needed] markers
+            code_blocks: List of (code_content, filename) tuples for attachments
+            recipient: Phone number to send attachments to (E.164 format)
+
+        Returns:
+            Updated message with attachment confirmations replacing markers
+        """
+        for code, filename in code_blocks:
+            # Calculate line count for the marker
+            line_count = code.count('\n') + 1
+            marker = f"[Code too long ({line_count} lines) - attachment coming...]"
+
+            # Upload attachment
+            attachment_id = await self.attachment_handler.send_code_file(
+                recipient, code, filename
+            )
+
+            if attachment_id:
+                # Replace marker with confirmation
+                confirmation = f"📎 Sent {filename} ({line_count} lines)"
+                formatted_message = formatted_message.replace(marker, confirmation)
+            # If upload fails, leave marker in place (attachment_handler logs the error)
+
+        return formatted_message
 
     def split_for_signal(self, text: str, max_len: int = 1600) -> List[str]:
         """
