@@ -17,6 +17,7 @@ from ..claude import ClaudeProcess
 from ..claude.orchestrator import ClaudeOrchestrator
 from ..claude.parser import OutputParser
 from ..claude.responder import SignalResponder
+from ..thread import ThreadMapper, ThreadCommands
 
 logger = structlog.get_logger(__name__)
 
@@ -46,6 +47,13 @@ class ServiceDaemon:
         self.session_lifecycle = SessionLifecycle(self.session_manager)
         self.crash_recovery = CrashRecovery(self.session_manager, self.session_lifecycle)
 
+        # Thread mapping component (initialized in async start())
+        # Get data directory from session manager pattern
+        from pathlib import Path
+        data_dir = Path.home() / "Library" / "Application Support" / "claude-signal-bot"
+        thread_db_path = data_dir / "thread_mappings.db"
+        self.thread_mapper = ThreadMapper(str(thread_db_path))
+
         # Claude integration components
         self.output_parser = OutputParser()
         self.signal_responder = SignalResponder()
@@ -56,6 +64,7 @@ class ServiceDaemon:
             send_signal=self.signal_client.send_message
         )
 
+        # Session commands (thread_commands will be set in async start())
         self.session_commands = SessionCommands(
             self.session_manager,
             self.session_lifecycle,
@@ -166,6 +175,13 @@ class ServiceDaemon:
             await self.session_manager.initialize()
             logger.info("session_manager_initialized")
 
+            # Initialize thread mapper
+            await self.thread_mapper.initialize()
+            logger.info("thread_mapper_initialized")
+
+            # Create thread commands (requires initialized mapper)
+            self.thread_commands = ThreadCommands(self.thread_mapper)
+
             # Run crash recovery
             recovered = await self.crash_recovery.recover()
             if recovered:
@@ -242,6 +258,10 @@ class ServiceDaemon:
             # Close session manager database connection
             await self.session_manager.close()
             logger.info("session_manager_closed")
+
+            # Close thread mapper database connection
+            await self.thread_mapper.close()
+            logger.info("thread_mapper_closed")
 
             logger.info("daemon_stopped")
 
