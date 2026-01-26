@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 6 of 10 (Code Display & Mobile UX)
-Plan: Ready for planning
-Status: Phase 5 complete, Phase 6 not planned yet
-Last activity: 2026-01-26 — Completed Phase 5 (Permission & Approval Workflows)
+Plan: 1 of 5
+Status: In progress
+Last activity: 2026-01-26 — Completed 06-01-PLAN.md (Code Display Foundation)
 
-Progress: ██████████ 50% (5 of 10 phases complete)
+Progress: ██████████░ 51% (5 phases + 1 plan complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
-- Average duration: 4.1 min
-- Total execution time: 2.1 hours (123.8 min)
+- Total plans completed: 26
+- Average duration: 4.0 min
+- Total execution time: 2.1 hours (125.8 min)
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: ██████████ 50% (5 of 10 phases complete)
 | 3 - Claude Integration | 5/5 | 15.5min | 3.1min |
 | 4 - Multi-Project Support | 5/5 | 21.6min | 4.3min |
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
+| 6 - Code Display & Mobile UX | 1/5 | 2min | 2.0min |
 
 **Recent Trend:**
-- Last 5 plans: 7min (04-05), 2.4min (05-01), 3min (05-02), 6.2min (05-04), 15.2min (05-05)
-- Trend: Phase 5 varied - 2 quick plans (2-3min), 2 medium plans (6-7min), 1 longer plan (15min)
+- Last 5 plans: 2.4min (05-01), 3min (05-02), 6.2min (05-04), 15.2min (05-05), 2min (06-01)
+- Trend: Phase 6 starting strong with 2min plan - TDD workflow efficient
 
 ## Accumulated Context
 
@@ -140,6 +141,11 @@ Recent decisions affecting current work:
 | ApprovalCommands wired in run() method | 05-05 | Follow Phase 4-3 ThreadCommands pattern for component wiring | Consistent component lifecycle, supports graceful degradation |
 | Single orchestrator instance receives approval_workflow | 05-05 | Daemon uses one orchestrator for all sessions (bridge updated per session) | Simpler than per-session orchestrators, same functionality |
 | Startup logging with tool classification metrics | 05-05 | Follow Phase 4-5 pattern for component initialization logging | Visibility into approval system state on startup |
+| MAX_WIDTH = 50 chars for mobile code display | 06-01 | 320px ÷ 6px per monospace char ≈ 53 chars; 50 provides margin | Code readable on smallest mobile screens without horizontal scroll |
+| Continuation marker (↪) for wrapped lines | 06-01 | Visual indicator that line continues below | Prevents confusion with natural line breaks in code |
+| Word boundary breaking in code wrapping | 06-01 | Breaking mid-identifier creates confusing partial tokens | Hard break at MAX_WIDTH if no space found (fallback) |
+| INLINE_MAX = 20 lines, ATTACH_MIN = 100 lines | 06-01 | Balance inline context with attachment for large code | Mid-range (20-100) defaults to inline for better UX |
+| Mid-range code (20-100 lines) defaults to inline | 06-01 | Better to show context inline than force download | Future /code full command will override for complete view |
 
 ### Pending Todos
 
@@ -152,5 +158,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 05-05-PLAN.md (Approval Workflow Integration) - Phase 5 complete (5/5 plans)
+Stopped at: Completed 06-01-PLAN.md (Code Display Foundation)
 Resume file: None
