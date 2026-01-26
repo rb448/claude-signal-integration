@@ -162,9 +162,9 @@ class TestSummaryGenerator:
         generator = SummaryGenerator()
         result = generator.generate([file_diff])
 
-        assert "Modified src/user.py" in result
-        assert "added 2 lines" in result
-        assert "removed 1 lines" in result
+        # Function detection takes priority over line counts (better UX)
+        assert "User" in result or "validate()" in result
+        assert "src/user.py" in result
 
     def test_generate_describes_multi_file_change(self):
         """SummaryGenerator lists multiple modified files."""
