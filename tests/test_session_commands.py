@@ -842,3 +842,75 @@ async def test_help_includes_approval_commands():
     assert "approve {id}" in help_text
     assert "reject {id}" in help_text
     assert "approve all" in help_text
+
+
+@pytest.mark.asyncio
+async def test_code_command_help():
+    """Test /code command shows help text."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    commands = SessionCommands(manager, lifecycle, process_factory)
+
+    # Call /code with no args
+    result = await commands.handle("thread-1", "/code")
+
+    # Should return help text
+    assert "Code Display Commands" in result
+    assert "/code full" in result
+    assert "/code help" in result
+
+
+@pytest.mark.asyncio
+async def test_code_command_explicit_help():
+    """Test /code help shows help text."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    commands = SessionCommands(manager, lifecycle, process_factory)
+
+    # Call /code help
+    result = await commands.handle("thread-1", "/code help")
+
+    # Should return help text
+    assert "Code Display Commands" in result
+    assert "/code full" in result
+
+
+@pytest.mark.asyncio
+async def test_code_command_full_placeholder():
+    """Test /code full returns placeholder for Phase 6."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    commands = SessionCommands(manager, lifecycle, process_factory)
+
+    # Call /code full
+    result = await commands.handle("thread-1", "/code full")
+
+    # Should return placeholder message
+    assert "not yet implemented" in result.lower() or "coming" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_code_command_unknown_subcommand():
+    """Test /code with unknown subcommand shows error."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    commands = SessionCommands(manager, lifecycle, process_factory)
+
+    # Call with unknown subcommand
+    result = await commands.handle("thread-1", "/code invalid")
+
+    # Should return error with help reference
+    assert "Unknown subcommand" in result or "invalid" in result
+    assert "/code help" in result
