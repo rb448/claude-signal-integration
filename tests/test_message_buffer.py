@@ -66,3 +66,41 @@ def test_drain_returns_all_buffered_messages():
     # Assert buffer now empty
     assert buffer.is_empty()
     assert len(buffer) == 0
+
+
+def test_is_empty_returns_correct_state():
+    """is_empty() should return correct state."""
+    buffer = MessageBuffer()
+
+    # New buffer: is_empty() == True
+    assert buffer.is_empty()
+
+    # After enqueue: is_empty() == False
+    buffer.enqueue("+1234567890", "msg1")
+    assert not buffer.is_empty()
+
+    # After drain: is_empty() == True
+    buffer.drain()
+    assert buffer.is_empty()
+
+
+def test_len_returns_buffer_count():
+    """__len__() should return current buffer count."""
+    buffer = MessageBuffer()
+
+    # New buffer: len(buffer) == 0
+    assert len(buffer) == 0
+
+    # After 3 enqueues: len(buffer) == 3
+    buffer.enqueue("+1234567890", "msg1")
+    buffer.enqueue("+1234567890", "msg2")
+    buffer.enqueue("+1234567890", "msg3")
+    assert len(buffer) == 3
+
+    # After 1 dequeue: len(buffer) == 2
+    buffer.dequeue()
+    assert len(buffer) == 2
+
+    # After drain: len(buffer) == 0
+    buffer.drain()
+    assert len(buffer) == 0
