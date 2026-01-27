@@ -151,3 +151,66 @@ class TestExponentialBackoff:
         manager.transition(ConnectionState.DISCONNECTED)
         manager.transition(ConnectionState.RECONNECTING)
         assert manager.calculate_backoff() == 1.0
+
+
+class TestReconnectionWorkflow:
+    """Test full reconnection workflow integration."""
+
+    def test_reconnection_workflow_success(self):
+        """Verify successful reconnection workflow on first attempt."""
+        manager = ReconnectionManager()
+
+        # Start in CONNECTED state
+        assert manager.state == ConnectionState.CONNECTED
+        assert manager.attempt_count == 0
+
+        # Simulate disconnect (network drop)
+        assert manager.transition(ConnectionState.DISCONNECTED) is True
+        assert manager.state == ConnectionState.DISCONNECTED
+
+        # Start reconnect attempt
+        assert manager.transition(ConnectionState.RECONNECTING) is True
+        assert manager.state == ConnectionState.RECONNECTING
+        assert manager.attempt_count == 1
+
+        # Calculate backoff (should be 1s for first attempt)
+        backoff = manager.calculate_backoff()
+        assert backoff == 1.0
+
+        # Simulate successful reconnection
+        assert manager.transition(ConnectionState.CONNECTED) is True
+        assert manager.state == ConnectionState.CONNECTED
+        assert manager.attempt_count == 0  # Reset on success
+
+    def test_reconnection_workflow_multiple_failures(self):
+        """Verify reconnection workflow with multiple failures before success."""
+        manager = ReconnectionManager()
+
+        # Start in CONNECTED, transition to DISCONNECTED
+        manager.transition(ConnectionState.DISCONNECTED)
+
+        # Attempt 1: RECONNECTING → backoff 1s → fail → DISCONNECTED
+        assert manager.transition(ConnectionState.RECONNECTING) is True
+        assert manager.attempt_count == 1
+        backoff1 = manager.calculate_backoff()
+        assert backoff1 == 1.0
+        # Simulate failed reconnection
+        assert manager.transition(ConnectionState.DISCONNECTED) is True
+
+        # Attempt 2: RECONNECTING → backoff 2s → fail → DISCONNECTED
+        assert manager.transition(ConnectionState.RECONNECTING) is True
+        assert manager.attempt_count == 2
+        backoff2 = manager.calculate_backoff()
+        assert backoff2 == 2.0
+        # Simulate failed reconnection
+        assert manager.transition(ConnectionState.DISCONNECTED) is True
+
+        # Attempt 3: RECONNECTING → backoff 4s → success → CONNECTED
+        assert manager.transition(ConnectionState.RECONNECTING) is True
+        assert manager.attempt_count == 3
+        backoff3 = manager.calculate_backoff()
+        assert backoff3 == 4.0
+        # Simulate successful reconnection
+        assert manager.transition(ConnectionState.CONNECTED) is True
+        assert manager.state == ConnectionState.CONNECTED
+        assert manager.attempt_count == 0  # Reset on success
