@@ -69,3 +69,26 @@ class ReconnectionManager:
                 self.attempt_count = 0  # Reset on successful connection
             return True
         return False
+
+    def calculate_backoff(self) -> float:
+        """Calculate exponential backoff delay in seconds.
+
+        Formula: min(2^(attempt_count - 1), MAX_BACKOFF)
+        - Attempt 1: 1s
+        - Attempt 2: 2s
+        - Attempt 3: 4s
+        - Attempt 4: 8s
+        - Attempt 5: 16s
+        - Attempt 6: 32s
+        - Attempt 7+: 60s (max)
+
+        Returns:
+            Backoff delay in seconds
+        """
+        MAX_BACKOFF = 60.0
+        if self.attempt_count == 0:
+            return 1.0  # First attempt (after reset)
+
+        # 2^(attempt - 1) with cap at MAX_BACKOFF
+        delay = 2 ** (self.attempt_count - 1)
+        return min(delay, MAX_BACKOFF)
