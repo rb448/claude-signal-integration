@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 7 of 10 (Connection Resilience)
-Plan: 2 of 3
+Plan: 1 of 3
 Status: In progress
-Last activity: 2026-01-27 — Completed 07-02-PLAN.md (Message Buffer)
+Last activity: 2026-01-27 — Completed 07-01-PLAN.md (Reconnection State Machine)
 
-Progress: ██████████░ 62% (6 phases complete, 2 of 3 plans in phase 7)
+Progress: ██████████░ 61% (6 phases complete, 1 of 3 plans in phase 7)
 
 ## Performance Metrics
 
 **Velocity:**
 - Total plans completed: 33
-- Average duration: 8.5 min
-- Total execution time: 4.5 hours (270 min)
+- Average duration: 7.4 min
+- Total execution time: 4.3 hours (264 min)
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: ██████████░ 62% (6 phases complete, 2 of 3 plans
 | 4 - Multi-Project Support | 5/5 | 21.6min | 4.3min |
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
-| 7 - Connection Resilience | 2/3 | 70min | 35min |
+| 7 - Connection Resilience | 1/3 | 64min | 64min |
 
 **Recent Trend:**
-- Last 5 plans: 2.8min (06-03), 5.3min (06-05), 40min (06-04), 17min (06-06), 70min (07-02)
-- Trend: Phase 7 significantly longer due to TDD discipline and comprehensive test coverage
+- Last 5 plans: 5.3min (06-05), 40min (06-04), 17min (06-06), 64min (07-01)
+- Trend: Phase 7 significantly longer due to strict TDD discipline and comprehensive test coverage
 
 ## Accumulated Context
 
@@ -172,6 +172,9 @@ Recent decisions affecting current work:
 | deque with maxlen for automatic oldest-drop | 07-02 | Python's deque maxlen automatically drops oldest when full | Zero-overhead overflow management in MessageBuffer |
 | Default max_size=100 messages | 07-02 | Balances reliability (substantial disconnect) with memory (25KB max) | Prevents both message loss and memory exhaustion |
 | drain() returns list and clears atomically | 07-02 | Reconnection needs all messages at once, not iterative dequeue | Simpler integration, prevents partial drains |
+| Set-based state transitions (VALID_TRANSITIONS) | 07-01 | O(1) lookup performance for transition validation | Fast validation, explicit state machine definition, easy to extend |
+| 60-second maximum backoff cap | 07-01 | Balance between API courtesy and user responsiveness | Max 60s wait even after many failures, prevents excessive delays |
+| attempt_count resets on CONNECTED transition | 07-01 | Successful connection indicates network stable, restart backoff sequence | Quick recovery after brief network instability, prevents overly conservative reconnection |
 
 ### Pending Todos
 
@@ -183,6 +186,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-27 13:15 UTC
-Stopped at: Completed 07-02-PLAN.md (Message Buffer)
+Last session: 2026-01-27 22:56 UTC
+Stopped at: Completed 07-01-PLAN.md (Reconnection State Machine)
 Resume file: None
