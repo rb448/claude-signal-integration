@@ -1,6 +1,7 @@
 """ClaudeOrchestrator coordinates command flow from Signal to Claude CLI and back."""
 
 import asyncio
+import re
 from typing import Callable, Optional, TYPE_CHECKING
 
 from .bridge import CLIBridge
@@ -50,13 +51,14 @@ class ClaudeOrchestrator:
         self.approval_workflow = approval_workflow
         self.session_id: Optional[str] = None
 
-    async def execute_command(self, command: str, session_id: str) -> None:
+    async def execute_command(self, command: str, session_id: str, recipient: str) -> None:
         """
         Execute a command and stream results back to Signal.
 
         Args:
             command: Command text to send to Claude CLI
             session_id: Session ID for routing responses
+            recipient: Signal recipient (phone number) for attachment uploads
 
         Process:
         1. Send command via bridge
@@ -116,6 +118,27 @@ class ClaudeOrchestrator:
 
                 # Format for Signal display
                 formatted = self.responder.format(parsed)
+
+                # Check if formatted message has attachment markers
+                attachment_marker_pattern = r'\[Code too long \(\d+ lines\) - attachment coming\.\.\.\]'
+                if re.search(attachment_marker_pattern, formatted):
+                    # Extract code blocks for attachment
+                    code_blocks = []
+
+                    # Response type contains the actual text content
+                    if parsed.type == OutputType.RESPONSE and hasattr(parsed, 'text'):
+                        # Generate timestamped filename
+                        import time
+                        timestamp = int(time.time())
+                        filename = f"output_{timestamp}.txt"
+
+                        code_blocks.append((parsed.text, filename))
+
+                    # Upload attachments and get updated message
+                    if code_blocks:
+                        formatted = await self.responder.send_with_attachments(
+                            formatted, code_blocks, recipient
+                        )
 
                 # Add to batch
                 batcher.add(formatted)
