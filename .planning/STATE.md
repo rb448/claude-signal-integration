@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** Enable complete Claude Code functionality from mobile without requiring GitHub repos - users can continue development work with local directories while away from their desk.
-**Current focus:** Phase 6 — Code Display & Mobile UX
+**Current focus:** Phase 7 — Connection Resilience
 
 ## Current Position
 
-Phase: 6 of 10 (Code Display & Mobile UX)
-Plan: 6 of 6
-Status: Phase complete
-Last activity: 2026-01-26 — Completed 06-06-PLAN.md (Code Display Integration)
+Phase: 7 of 10 (Connection Resilience)
+Plan: 2 of 3
+Status: In progress
+Last activity: 2026-01-27 — Completed 07-02-PLAN.md (Message Buffer)
 
-Progress: ██████████░ 60% (6 phases complete)
+Progress: ██████████░ 62% (6 phases complete, 2 of 3 plans in phase 7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32
-- Average duration: 4.4 min
-- Total execution time: 3.3 hours (200 min)
+- Total plans completed: 33
+- Average duration: 8.5 min
+- Total execution time: 4.5 hours (270 min)
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: ██████████░ 60% (6 phases complete)
 | 4 - Multi-Project Support | 5/5 | 21.6min | 4.3min |
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
+| 7 - Connection Resilience | 2/3 | 70min | 35min |
 
 **Recent Trend:**
-- Last 5 plans: 3.2min (06-02), 2.8min (06-03), 5.3min (06-05), 40min (06-04), 17min (06-06)
-- Trend: Phase 6 plans vary widely (2-40min) due to verification checkpoints (06-04) vs pure integration (06-06)
+- Last 5 plans: 2.8min (06-03), 5.3min (06-05), 40min (06-04), 17min (06-06), 70min (07-02)
+- Trend: Phase 7 significantly longer due to TDD discipline and comprehensive test coverage
 
 ## Accumulated Context
 
@@ -168,6 +169,9 @@ Recent decisions affecting current work:
 | send_with_attachments() as separate method | 06-06 | Keeps format() pure (string transformation) separate from I/O operations | Cleaner architecture, easier testing, explicit post-processing step |
 | /code full implementation deferred to Phase 7 | 06-06 | Requires session context tracking to store "last code output" | Natural fit for Phase 7 (Connection Resilience) which includes session state sync |
 | Attachment marker line count calculation | 06-06 | Must match exact calculation in send_with_attachments() (code.count('\n') + 1) | Ensures marker replacement works correctly |
+| deque with maxlen for automatic oldest-drop | 07-02 | Python's deque maxlen automatically drops oldest when full | Zero-overhead overflow management in MessageBuffer |
+| Default max_size=100 messages | 07-02 | Balances reliability (substantial disconnect) with memory (25KB max) | Prevents both message loss and memory exhaustion |
+| drain() returns list and clears atomically | 07-02 | Reconnection needs all messages at once, not iterative dequeue | Simpler integration, prevents partial drains |
 
 ### Pending Todos
 
@@ -179,6 +183,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-26 23:30 UTC
-Stopped at: Completed 06-06-PLAN.md (Code Display Integration) - Phase 6 complete
+Last session: 2026-01-27 13:15 UTC
+Stopped at: Completed 07-02-PLAN.md (Message Buffer)
 Resume file: None
