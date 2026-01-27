@@ -257,7 +257,14 @@ class ServiceDaemon:
             # Connect to Signal API
             try:
                 await self.signal_client.connect()
-                logger.info("signal_connected", api_url=self.signal_client.api_url)
+                logger.info(
+                    "daemon_started",
+                    phone_number=self.phone_verifier.authorized_number,
+                    health_port=8081,
+                    connection_resilience="enabled",
+                    reconnection_backoff="exponential_1s_to_60s",
+                    message_buffer_size=100
+                )
             except ConnectionError as e:
                 logger.error("signal_connection_failed", error=str(e))
                 return
@@ -287,6 +294,29 @@ class ServiceDaemon:
 
             receive_task = asyncio.create_task(receive_loop())
 
+            # Monitor connection state changes
+            async def monitor_connection_state():
+                """Monitor and log connection state changes."""
+                last_state = self.signal_client.reconnection_manager.state
+                while not self._shutdown_event.is_set():
+                    await asyncio.sleep(1)  # Check state every second
+                    current_state = self.signal_client.reconnection_manager.state
+                    if current_state != last_state:
+                        logger.info(
+                            "connection_status_changed",
+                            old_state=last_state.name,
+                            new_state=current_state.name
+                        )
+                        if current_state.name == "RECONNECTING":
+                            logger.info(
+                                "reconnection_attempt",
+                                attempt_count=self.signal_client.reconnection_manager.attempt_count,
+                                backoff_delay=self.signal_client.reconnection_manager.calculate_backoff()
+                            )
+                        last_state = current_state
+
+            monitor_task = asyncio.create_task(monitor_connection_state())
+
             logger.info("daemon_running")
 
             # Wait for shutdown signal
@@ -298,8 +328,9 @@ class ServiceDaemon:
             self.message_queue.stop_processing()
             queue_task.cancel()
             receive_task.cancel()
+            monitor_task.cancel()
             try:
-                await asyncio.gather(queue_task, receive_task, return_exceptions=True)
+                await asyncio.gather(queue_task, receive_task, monitor_task, return_exceptions=True)
             except asyncio.CancelledError:
                 pass
 
