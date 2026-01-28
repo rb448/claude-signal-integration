@@ -1,18 +1,6 @@
 """Event categorization with urgency levels for notification system."""
 
-from enum import IntEnum
-
-
-class UrgencyLevel(IntEnum):
-    """Urgency levels for notification events.
-
-    Lower numeric values = higher urgency.
-    """
-
-    URGENT = 0  # Immediate attention required (errors, approvals)
-    IMPORTANT = 1  # Notable events (completion, reconnection)
-    INFORMATIONAL = 2  # Background activity (progress updates)
-    SILENT = 3  # No notification sent
+from src.notification.types import UrgencyLevel
 
 
 class EventCategorizer:
