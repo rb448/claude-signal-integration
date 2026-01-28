@@ -36,6 +36,7 @@ Each phase includes a **TDD Strategy** section specifying:
 - [ ] **Phase 8: Notification System** - Configurable push notifications
 - [ ] **Phase 9: Advanced Features** - Custom commands and emergency mode
 - [x] **Phase 10: Testing & Quality** - Comprehensive test suite and CI/CD
+- [ ] **Phase 11: Claude Integration Wiring Fixes** - Restore primary user flow (gap closure)
 
 ## Phase Details
 
@@ -425,6 +426,38 @@ Plans:
 - [x] 10-04: CI/CD Setup
 - [x] 10-05: Coverage Gaps & Security Testing
 
+### Phase 11: Claude Integration Wiring Fixes
+**Goal**: Wire Claude command execution and response routing to restore primary user flow
+**Depends on**: Phase 3 (builds on Claude Integration infrastructure)
+**Requirements**: Restores CLDE-01, CLDE-02 (bidirectional communication)
+**Gap Closure**: Closes 2 integration gaps + 1 flow gap from v1.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. SessionCommands passes all required parameters to execute_command (recipient, thread_id)
+  2. ClaudeOrchestrator routes responses using thread_id instead of session_id
+  3. Primary user flow works: Start session → Send Claude command → Receive response
+  4. Integration test validates full flow end-to-end
+  5. No signature mismatches in Claude integration layer
+**TDD Strategy**: Test-first for integration wiring
+  - **TDD (write tests FIRST):**
+    - Integration test for full user flow (start → command → response)
+    - Signature validation test (execute_command receives all 4 parameters)
+    - Response routing test (thread_id used for send_message)
+  - **Implementation (after tests fail):**
+    - Fix execute_command call in SessionCommands (add recipient, thread_id)
+    - Store thread_id in ClaudeOrchestrator and use for routing
+  - **Test-first execution order:**
+    1. Write failing integration test: test_full_user_flow (start session → send command → verify response received)
+    2. Run test → fails at execute_command call (signature mismatch)
+    3. Fix SessionCommands line 237 → add recipient=thread_id, thread_id=thread_id
+    4. Run test → fails at response routing (session_id used instead of thread_id)
+    5. Fix ClaudeOrchestrator lines 67, 216 → store and use thread_id
+    6. Run test → passes (full flow works)
+**Research**: Not needed (simple parameter wiring)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 11-01: Fix execute_command wiring and response routing
+
 ## Progress
 
 **Execution Order:**
@@ -442,3 +475,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 | 8. Notifications | 5/5 | Complete | 2026-01-28 |
 | 9. Advanced Features | 5/5 | Complete | 2026-01-28 |
 | 10. Testing & Quality | 5/5 | Complete | 2026-01-28 |
+| 11. Wiring Fixes | 0/1 | Pending | - |
