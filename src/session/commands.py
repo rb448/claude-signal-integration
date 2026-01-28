@@ -12,6 +12,8 @@ from src.claude.orchestrator import ClaudeOrchestrator
 from src.thread import ThreadCommands, ThreadMapper
 from src.approval.commands import ApprovalCommands
 from src.notification.commands import NotificationCommands
+from src.custom_commands.commands import CustomCommands
+from src.emergency.commands import EmergencyCommands
 
 
 class SessionCommands:
@@ -33,6 +35,8 @@ class SessionCommands:
         thread_mapper: Optional[ThreadMapper] = None,
         approval_commands: Optional[ApprovalCommands] = None,
         notification_commands: Optional[NotificationCommands] = None,
+        custom_commands: Optional[CustomCommands] = None,
+        emergency_commands: Optional[EmergencyCommands] = None,
     ):
         """
         Initialize SessionCommands.
@@ -46,6 +50,8 @@ class SessionCommands:
             thread_mapper: ThreadMapper for thread-to-project mapping lookups
             approval_commands: ApprovalCommands for approval/rejection operations
             notification_commands: NotificationCommands for notification preference operations
+            custom_commands: CustomCommands for custom command operations
+            emergency_commands: EmergencyCommands for emergency mode operations
         """
         self.manager = session_manager
         self.lifecycle = session_lifecycle
@@ -55,6 +61,8 @@ class SessionCommands:
         self.thread_mapper = thread_mapper
         self.approval_commands = approval_commands
         self.notification_commands = notification_commands
+        self.custom_commands = custom_commands
+        self.emergency_commands = emergency_commands
         self.processes: dict[str, ClaudeProcess] = {}  # session_id -> process
         self.thread_sessions: dict[str, str] = {}  # thread_id -> session_id (active sessions)
 
@@ -76,28 +84,42 @@ class SessionCommands:
             if result is not None:
                 return result
 
-        # 2. Notification commands (user configuration)
+        # 2. Emergency commands (urgent mode operations)
+        if message.strip().startswith("/emergency"):
+            if self.emergency_commands:
+                return await self.emergency_commands.handle(thread_id, message)
+            else:
+                return "Emergency mode not available."
+
+        # 3. Notification commands (user configuration)
         if self.notification_commands:
             result = await self.notification_commands.handle(message, thread_id)
             if result is not None:
                 return result
 
-        # 3. Thread commands (project management)
+        # 4. Custom commands (feature-specific operations)
+        if message.strip().startswith("/custom"):
+            if self.custom_commands:
+                return await self.custom_commands.handle(thread_id, message)
+            else:
+                return "Custom commands not available."
+
+        # 5. Thread commands (project management)
         if message.strip().startswith("/thread"):
             if self.thread_commands:
                 return await self.thread_commands.handle(thread_id, message)
             else:
                 return "Thread management not available."
 
-        # 4. Code display commands
+        # 6. Code display commands
         if message.strip().startswith("/code"):
             return await self._handle_code_command(message, thread_id)
 
-        # 5. Session commands (session lifecycle)
+        # 7. Session commands (session lifecycle)
         if message.strip().startswith("/session"):
             return await self._handle_session_command(thread_id, message)
 
-        # 6. Claude commands (everything else)
+        # 8. Claude commands (everything else)
         return await self._handle_claude_command(thread_id, message)
 
     async def _handle_session_command(self, thread_id: str, message: str) -> str:
@@ -399,9 +421,19 @@ class SessionCommands:
         if self.approval_commands:
             help_text += self.approval_commands.help() + "\n\n"
 
+        # Add emergency commands reference
+        if self.emergency_commands:
+            help_text += "Emergency Mode:\n"
+            help_text += "  /emergency help - Show emergency mode commands\n\n"
+
         # Add notification commands if available
         if self.notification_commands:
             help_text += self.notification_commands.help() + "\n\n"
+
+        # Add custom commands reference
+        if self.custom_commands:
+            help_text += "Custom Commands:\n"
+            help_text += "  /custom help - Show custom command operations\n\n"
 
         # Add thread commands reference (they have /thread help)
         if self.thread_commands:
