@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 8 of 10 (Notification System)
-Plan: 1 of 5
+Plan: 2 of 5
 Status: In progress
-Last activity: 2026-01-28 — Completed 08-01-PLAN.md (Event Categorization & Formatting)
+Last activity: 2026-01-28 — Completed 08-02-PLAN.md (Notification Preferences)
 
-Progress: ████████████░ 76% (7 phases complete, 1 of 5 plans in phase 8)
+Progress: ████████████░ 78% (7 phases complete, 2 of 5 plans in phase 8)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 38
-- Average duration: 8.0 min
-- Total execution time: 5.18 hours (311 min)
+- Total plans completed: 39
+- Average duration: 7.7 min
+- Total execution time: 5.23 hours (314 min)
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: ████████████░ 76% (7 phases complete, 1 of 5
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
-| 8 - Notification System | 1/5 | 3min | 3.0min |
+| 8 - Notification System | 2/5 | 6min | 3.0min |
 
 **Recent Trend:**
-- Last 5 plans: 0min (07-02), 12min (07-03), 15min (07-04), 17min (07-05), 3min (08-01)
-- Trend: Phase 8 started - TDD plan completed quickly (3min)
+- Last 5 plans: 12min (07-03), 15min (07-04), 17min (07-05), 3min (08-01), 3min (08-02)
+- Trend: Phase 8 progress - TDD plans executing quickly (both 3min)
 
 ## Accumulated Context
 
@@ -194,6 +194,13 @@ Recent decisions affecting current work:
 | Unknown event types default to INFORMATIONAL | 08-01 | Fail-safe default, better than dropping notifications | New event types automatically handled until categorization rule added |
 | SILENT urgency returns empty string | 08-01 | Explicit "no notification" support for future filtering | Formatter returns "" for SILENT events (no Signal message sent) |
 | Session IDs truncated to 8 chars in notifications | 08-01 | Follows Phase 2-6 convention, mobile-friendly display | "abc123de-f456-..." → "abc123de" in notifications |
+| UrgencyLevel enum with 4 levels (URGENT, IMPORTANT, INFORMATIONAL, SILENT) | 08-02 | Clear hierarchy for notification prioritization | Enables preference matching with urgency overrides |
+| URGENT overrides user preferences (always notify) | 08-02 | Critical events (errors, approvals) must not be silenced | Prevents user misconfiguration from degrading experience |
+| SILENT overrides user preferences (never notify) | 08-02 | Internal events should never create user-facing notifications | Prevents debug/internal noise in Signal messages |
+| Default preferences by urgency: IMPORTANT=True, INFORMATIONAL=False | 08-02 | Completion/reconnection events useful by default, progress events chatty | Balances discoverability with noise reduction |
+| Application Support directory for notification_prefs.db | 08-02 | Follows macOS standards, consistent with thread/session databases | User-friendly location, persistent across updates |
+| Composite primary key (thread_id, event_type) | 08-02 | Enables per-thread, per-event-type granular preference control | Fine-grained control without complex preference hierarchies |
+| Idempotent upsert with ON CONFLICT for preferences | 08-02 | Follows Phase 2-5 patterns, safe retry logic | set_preference() can be called repeatedly without errors |
 
 ### Pending Todos
 
@@ -206,5 +213,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-28 15:07 UTC
-Stopped at: Completed 08-01-PLAN.md (Event Categorization & Formatting)
+Stopped at: Completed 08-02-PLAN.md (Notification Preferences)
 Resume file: None
