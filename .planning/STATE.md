@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 8 of 10 (Notification System)
-Plan: 3 of 5
+Plan: 4 of 5
 Status: In progress
-Last activity: 2026-01-28 — Completed 08-03-PLAN.md (Notification Command Interface)
+Last activity: 2026-01-28 — Completed 08-04-PLAN.md (Notification Integration)
 
-Progress: ████████████░ 80% (7 phases complete, 3 of 5 plans in phase 8)
+Progress: ████████████░ 82% (7 phases complete, 4 of 5 plans in phase 8)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 40
-- Average duration: 7.6 min
-- Total execution time: 5.30 hours (318 min)
+- Total plans completed: 41
+- Average duration: 7.5 min
+- Total execution time: 5.37 hours (322 min)
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: ████████████░ 80% (7 phases complete, 3 of 5
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
-| 8 - Notification System | 3/5 | 10min | 3.3min |
+| 8 - Notification System | 4/5 | 14min | 3.5min |
 
 **Recent Trend:**
-- Last 5 plans: 15min (07-04), 17min (07-05), 3min (08-01), 3min (08-02), 4min (08-03)
-- Trend: Phase 8 consistency - simple command/integration plans executing in 3-4min
+- Last 5 plans: 17min (07-05), 3min (08-01), 3min (08-02), 4min (08-03), 4min (08-04)
+- Trend: Phase 8 maintaining consistency - integration/wiring plans executing in 3-4min
 
 ## Accumulated Context
 
@@ -206,6 +206,11 @@ Recent decisions affecting current work:
 | URGENT events cannot be disabled via /notify disable | 08-03 | Critical notifications (error, approval_needed) must not be silenced | Prevents user misconfiguration that breaks core functionality |
 | Mobile-friendly emoji status indicators (✅/❌) in /notify list | 08-03 | Visual status scanning on small screens without reading text | Follows Phase 6 mobile-first UX patterns |
 | UrgencyLevel as IntEnum consolidated in types.py | 08-03 | Single source of truth, supports comparison operations | URGENT=0, IMPORTANT=1, INFORMATIONAL=2, SILENT=3 with lower=higher urgency |
+| NotificationManager orchestration pattern | 08-04 | Single notify() method coordinates categorization, preferences, formatting, and delivery | Simpler API for event sources (one call instead of multiple) |
+| Optional notification_manager parameters for backwards compatibility | 08-04 | Follow Phase 5 ApprovalWorkflow pattern | Components work without notification system for testing and gradual rollout |
+| Error notifications on exception, completion notifications on success | 08-04 | Error notifications: after user-facing error sent; Completion: before method returns | Ensures user sees error message before notification arrives |
+| Notification system initialized in daemon run() after signal_client ready | 08-04 | async components need connection, follows Phase 4-5 pattern | notification_manager created when signal_client available for message sending |
+| thread_id from recipient as fallback in orchestrator | 08-04 | execute_command() uses thread_id parameter or falls back to recipient | Ensures notifications work even without explicit thread_id |
 
 ### Pending Todos
 
@@ -217,6 +222,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 15:15 UTC
-Stopped at: Completed 08-03-PLAN.md (Notification Command Interface)
+Last session: 2026-01-28 15:22 UTC
+Stopped at: Completed 08-04-PLAN.md (Notification Integration)
 Resume file: None
