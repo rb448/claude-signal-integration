@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 8 of 10 (Notification System)
-Plan: 2 of 5
+Plan: 3 of 5
 Status: In progress
-Last activity: 2026-01-28 — Completed 08-02-PLAN.md (Notification Preferences)
+Last activity: 2026-01-28 — Completed 08-03-PLAN.md (Notification Command Interface)
 
-Progress: ████████████░ 78% (7 phases complete, 2 of 5 plans in phase 8)
+Progress: ████████████░ 80% (7 phases complete, 3 of 5 plans in phase 8)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39
-- Average duration: 7.7 min
-- Total execution time: 5.23 hours (314 min)
+- Total plans completed: 40
+- Average duration: 7.6 min
+- Total execution time: 5.30 hours (318 min)
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: ████████████░ 78% (7 phases complete, 2 of 5
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
-| 8 - Notification System | 2/5 | 6min | 3.0min |
+| 8 - Notification System | 3/5 | 10min | 3.3min |
 
 **Recent Trend:**
-- Last 5 plans: 12min (07-03), 15min (07-04), 17min (07-05), 3min (08-01), 3min (08-02)
-- Trend: Phase 8 progress - TDD plans executing quickly (both 3min)
+- Last 5 plans: 15min (07-04), 17min (07-05), 3min (08-01), 3min (08-02), 4min (08-03)
+- Trend: Phase 8 consistency - simple command/integration plans executing in 3-4min
 
 ## Accumulated Context
 
@@ -201,6 +201,11 @@ Recent decisions affecting current work:
 | Application Support directory for notification_prefs.db | 08-02 | Follows macOS standards, consistent with thread/session databases | User-friendly location, persistent across updates |
 | Composite primary key (thread_id, event_type) | 08-02 | Enables per-thread, per-event-type granular preference control | Fine-grained control without complex preference hierarchies |
 | Idempotent upsert with ON CONFLICT for preferences | 08-02 | Follows Phase 2-5 patterns, safe retry logic | set_preference() can be called repeatedly without errors |
+| NotificationCommands follows ApprovalCommands pattern | 08-03 | Consistent command handler design across approval/thread/notification | async handle(message, thread_id) signature matches ThreadCommands |
+| Priority routing: approval → notify → thread → code → session → claude | 08-03 | Urgent operations first, then config, then operational, then content | Clear mental model prevents command conflicts |
+| URGENT events cannot be disabled via /notify disable | 08-03 | Critical notifications (error, approval_needed) must not be silenced | Prevents user misconfiguration that breaks core functionality |
+| Mobile-friendly emoji status indicators (✅/❌) in /notify list | 08-03 | Visual status scanning on small screens without reading text | Follows Phase 6 mobile-first UX patterns |
+| UrgencyLevel as IntEnum consolidated in types.py | 08-03 | Single source of truth, supports comparison operations | URGENT=0, IMPORTANT=1, INFORMATIONAL=2, SILENT=3 with lower=higher urgency |
 
 ### Pending Todos
 
@@ -212,6 +217,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 15:07 UTC
-Stopped at: Completed 08-02-PLAN.md (Notification Preferences)
+Last session: 2026-01-28 15:15 UTC
+Stopped at: Completed 08-03-PLAN.md (Notification Command Interface)
 Resume file: None
