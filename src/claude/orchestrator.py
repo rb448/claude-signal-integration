@@ -240,3 +240,33 @@ class ClaudeOrchestrator:
         """
         if self.approval_workflow:
             self.approval_workflow.manager.reject(request_id)
+
+    async def execute_custom_command(self, command_name: str, args: str, thread_id: str) -> None:
+        """
+        Execute a custom command via Claude CLI.
+
+        Custom commands are Claude Code slash commands stored in the registry.
+        This method formats the command and sends it through the existing
+        execute_command flow for streaming responses.
+
+        Args:
+            command_name: Name of custom command (e.g., "gsd:plan")
+            args: Command arguments
+            thread_id: Signal thread ID for routing responses
+
+        Process:
+        1. Format as slash command: /{command_name} {args}
+        2. Send via bridge
+        3. Stream responses back to Signal (reuses execute_command infrastructure)
+        """
+        # Format command with slash prefix
+        formatted_command = f"/{command_name} {args}"
+
+        # Use existing execute_command for streaming
+        # Session ID can be derived from thread_id or use thread_id directly
+        await self.execute_command(
+            command=formatted_command,
+            session_id=thread_id,  # Use thread_id as session_id for now
+            recipient=thread_id,
+            thread_id=thread_id
+        )

@@ -9,6 +9,8 @@ from src.approval.manager import ApprovalManager
 from src.approval.models import ApprovalState
 from src.approval.workflow import ApprovalWorkflow
 from src.claude.parser import ToolCall, OutputType
+from src.emergency.mode import EmergencyMode
+from src.emergency.auto_approver import EmergencyAutoApprover
 
 
 @pytest.fixture
@@ -199,3 +201,91 @@ class TestFormatApprovalMessage:
         assert "Write" in message
         assert "/new/file.py" in message
         assert reason in message
+
+
+class TestEmergencyAutoApproval:
+    """Tests for emergency mode auto-approval integration."""
+
+    @pytest.fixture
+    async def emergency_mode(self, tmp_path):
+        """Create EmergencyMode instance."""
+        db_path = str(tmp_path / "test_emergency.db")
+        mode = EmergencyMode(db_path=db_path)
+        await mode.initialize()
+        return mode
+
+    @pytest.fixture
+    def auto_approver(self):
+        """Create EmergencyAutoApprover instance."""
+        return EmergencyAutoApprover()
+
+    @pytest.fixture
+    def workflow_with_emergency(self, detector, manager, auto_approver, emergency_mode):
+        """Create ApprovalWorkflow with emergency auto-approver."""
+        return ApprovalWorkflow(detector, manager, emergency_auto_approver=auto_approver, emergency_mode=emergency_mode)
+
+    @pytest.mark.asyncio
+    async def test_auto_approve_read_in_emergency(self, workflow_with_emergency, emergency_mode, manager):
+        """Read tool should be auto-approved in emergency mode, no request created."""
+        # Activate emergency mode
+        await emergency_mode.activate("+1234567890")
+
+        # Request approval for Read
+        tool_call = ToolCall(type=OutputType.TOOL_CALL, tool="Read", target="/path/to/file.py")
+        thread_id = "+1234567890"
+
+        # Should return None (no request created)
+        result = await workflow_with_emergency.request_approval(tool_call, thread_id)
+
+        assert result is None
+        # Verify no approval request was created
+        assert len(manager.list_pending()) == 0
+
+    @pytest.mark.asyncio
+    async def test_auto_approve_grep_in_emergency(self, workflow_with_emergency, emergency_mode, manager):
+        """Grep tool should be auto-approved in emergency mode."""
+        # Activate emergency mode
+        await emergency_mode.activate("+1234567890")
+
+        # Request approval for Grep
+        tool_call = ToolCall(type=OutputType.TOOL_CALL, tool="Grep", target="pattern")
+        thread_id = "+1234567890"
+
+        result = await workflow_with_emergency.request_approval(tool_call, thread_id)
+
+        assert result is None
+        assert len(manager.list_pending()) == 0
+
+    @pytest.mark.asyncio
+    async def test_require_approval_edit_in_emergency(self, workflow_with_emergency, emergency_mode, manager):
+        """Edit tool should still require approval in emergency mode."""
+        # Activate emergency mode
+        await emergency_mode.activate("+1234567890")
+
+        # Request approval for Edit (DESTRUCTIVE)
+        tool_call = ToolCall(type=OutputType.TOOL_CALL, tool="Edit", target="/path/to/file.py")
+        thread_id = "+1234567890"
+
+        result = await workflow_with_emergency.request_approval(tool_call, thread_id)
+
+        # Should create approval request
+        assert result is not None
+        assert isinstance(result, str)
+        assert len(manager.list_pending()) == 1
+
+    @pytest.mark.asyncio
+    async def test_normal_mode_flow_unchanged(self, workflow_with_emergency, emergency_mode, manager):
+        """Emergency mode should not affect normal mode approval flow."""
+        # Do NOT activate emergency mode - should be normal
+        assert not await emergency_mode.is_active()
+
+        # Request approval for Edit (DESTRUCTIVE - requires approval even without emergency mode)
+        tool_call = ToolCall(type=OutputType.TOOL_CALL, tool="Edit", target="/path/to/file.py")
+        thread_id = "+1234567890"
+
+        result = await workflow_with_emergency.request_approval(tool_call, thread_id)
+
+        # In normal mode, Edit should create approval request (as it always does)
+        # This tests that emergency mode doesn't break normal flow
+        assert result is not None
+        assert len(manager.list_pending()) == 1

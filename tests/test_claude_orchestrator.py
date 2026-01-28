@@ -287,3 +287,100 @@ async def test_execute_command_without_attachment_markers():
     final_call = send_signal.call_args_list[-1]
     final_message = final_call[0][1]
     assert "```python" in final_message or "code" in final_message
+
+
+@pytest.mark.asyncio
+async def test_execute_custom_command():
+    """Test custom command execution sends formatted command to bridge."""
+    # Arrange
+    bridge = Mock()
+    parser = OutputParser()
+    responder = SignalResponder()
+    send_signal = AsyncMock()
+
+    # Mock bridge response
+    async def mock_read_response():
+        yield "Executing custom command..."
+        yield "Command completed!"
+
+    bridge.send_command = AsyncMock()
+    bridge.read_response = mock_read_response
+
+    orchestrator = ClaudeOrchestrator(bridge, parser, responder, send_signal)
+
+    # Act
+    await orchestrator.execute_custom_command(
+        command_name="gsd:plan",
+        args="my-project high-priority",
+        thread_id="thread-123"
+    )
+
+    # Assert - command should be formatted as /command args and sent to bridge
+    bridge.send_command.assert_called_once_with("/gsd:plan my-project high-priority")
+
+
+@pytest.mark.asyncio
+async def test_execute_custom_command_streams_response():
+    """Test custom command responses are streamed to Signal."""
+    # Arrange
+    bridge = Mock()
+    parser = OutputParser()
+    responder = SignalResponder()
+    send_signal = AsyncMock()
+
+    # Mock bridge response with multiple lines
+    async def mock_read_response():
+        yield "Creating project plan..."
+        yield "Using Read tool on context.md"
+        yield "Generated plan structure"
+        yield "Done!"
+
+    bridge.send_command = AsyncMock()
+    bridge.read_response = mock_read_response
+
+    orchestrator = ClaudeOrchestrator(bridge, parser, responder, send_signal)
+
+    # Act
+    await orchestrator.execute_custom_command(
+        command_name="test:cmd",
+        args="",
+        thread_id="thread-456"
+    )
+
+    # Assert - responses should be sent to Signal
+    assert send_signal.call_count >= 1
+    calls = send_signal.call_args_list
+    messages = [call[0][1] for call in calls]
+    combined = "\n".join(messages)
+
+    # Should contain tool emoji and responses
+    assert "📖" in combined  # Read tool
+    assert "Done!" in combined or "plan" in combined.lower()
+
+
+@pytest.mark.asyncio
+async def test_execute_custom_command_no_args():
+    """Test custom command execution without arguments."""
+    # Arrange
+    bridge = Mock()
+    parser = OutputParser()
+    responder = SignalResponder()
+    send_signal = AsyncMock()
+
+    async def mock_read_response():
+        yield "Command executed"
+
+    bridge.send_command = AsyncMock()
+    bridge.read_response = mock_read_response
+
+    orchestrator = ClaudeOrchestrator(bridge, parser, responder, send_signal)
+
+    # Act
+    await orchestrator.execute_custom_command(
+        command_name="simple:cmd",
+        args="",
+        thread_id="thread-789"
+    )
+
+    # Assert - command sent without args (just slash + name)
+    bridge.send_command.assert_called_once_with("/simple:cmd ")
