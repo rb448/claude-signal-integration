@@ -375,7 +375,9 @@ class SessionManager:
         summary_lines.append("\nReady to continue!")
 
         # Clear activity log after generating summary
-        await self.update_context(session_id, {"activity_log": []})
+        updated_context = session.context.copy()
+        updated_context["activity_log"] = []
+        await self.update(session_id, context=updated_context)
 
         return "\n".join(summary_lines)
 

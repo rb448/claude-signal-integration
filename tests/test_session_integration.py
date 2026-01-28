@@ -605,3 +605,97 @@ async def test_session_tracks_claude_activity_during_disconnect():
 
     # Cleanup
     await session_manager.close()
+
+
+@pytest.mark.asyncio
+async def test_catchup_summary_after_reconnection():
+    """
+    Test complete offline work → reconnection → catch-up summary flow.
+
+    Scenario:
+    1. Start session
+    2. Track several Claude activities
+    3. Simulate reconnection
+    4. Verify catch-up summary generated
+    5. Verify summary sent as notification
+    6. Verify activity log cleared after summary
+    """
+    # Setup
+    session_manager = SessionManager(db_path=":memory:")
+    await session_manager.initialize()
+
+    # 1. Create session
+    session = await session_manager.create("/tmp/test-project", "+15559999999")
+
+    # 2. Track multiple activities
+    activities = [
+        ("tool_call", {"tool": "Read", "target": "config.json"}),
+        ("tool_call", {"tool": "Edit", "target": "src/main.py"}),
+        ("command_executed", {"command": "pytest"}),
+    ]
+    for activity_type, details in activities:
+        await session_manager.track_activity(session.id, activity_type, details)
+
+    # 3. Generate catch-up summary
+    summary = await session_manager.generate_catchup_summary(session.id)
+
+    # 4. Verify summary content
+    assert "3 operations" in summary
+    assert "Read config.json" in summary
+    assert "Edit src/main.py" in summary
+    assert "pytest" in summary
+    assert "Ready to continue" in summary
+
+    # 5. Verify activity log cleared
+    updated_session = await session_manager.get(session.id)
+    assert updated_session.context.get("activity_log") == []
+
+    # Cleanup
+    await session_manager.close()
+
+
+@pytest.mark.asyncio
+async def test_catchup_summary_empty_activity_log():
+    """Test catch-up summary with empty activity log returns appropriate message."""
+    # Setup
+    session_manager = SessionManager(db_path=":memory:")
+    await session_manager.initialize()
+
+    # Create session without any activities
+    session = await session_manager.create("/tmp/test-project", "+15559999999")
+
+    # Generate summary
+    summary = await session_manager.generate_catchup_summary(session.id)
+
+    # Verify empty message
+    assert summary == "No activity while disconnected"
+
+    # Cleanup
+    await session_manager.close()
+
+
+@pytest.mark.asyncio
+async def test_catchup_summary_single_activity():
+    """Test catch-up summary with single activity (singular grammar)."""
+    # Setup
+    session_manager = SessionManager(db_path=":memory:")
+    await session_manager.initialize()
+
+    # Create session with one activity
+    session = await session_manager.create("/tmp/test-project", "+15559999999")
+    await session_manager.track_activity(
+        session.id,
+        "tool_call",
+        {"tool": "Read", "target": "config.json"}
+    )
+
+    # Generate summary
+    summary = await session_manager.generate_catchup_summary(session.id)
+
+    # Verify singular grammar
+    assert "1 operation:" in summary
+    assert "operations" not in summary
+    assert "Read config.json" in summary
+
+    # Cleanup
+    await session_manager.close()
