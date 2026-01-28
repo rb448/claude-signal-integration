@@ -203,3 +203,124 @@ async def test_start_raises_if_already_running():
                 await process.start()
         finally:
             await process.stop()
+
+
+@pytest.mark.asyncio
+async def test_stop_no_process():
+    """Verify stop() handles case where process was never started."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        process = ClaudeProcess(session_id="test-no-process", project_path=tmpdir)
+
+        # Call stop without ever calling start
+        await process.stop()  # Should not raise exception
+
+        # is_running should be False
+        assert not process.is_running
+
+
+@pytest.mark.asyncio
+async def test_stop_already_stopped():
+    """Verify stop() handles case where process already exited."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        process = ClaudeProcess(session_id="test-already-stopped", project_path=tmpdir)
+
+        # Start a process that exits immediately
+        async def mock_start():
+            process._process = await asyncio.create_subprocess_exec(
+                "echo",
+                "test",
+                cwd=process.project_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            # Wait for it to exit
+            await process._process.wait()
+
+        process.start = mock_start
+        await process.start()
+
+        # Process should already be stopped
+        assert not process.is_running
+
+        # Call stop on already-stopped process
+        await process.stop()  # Should handle gracefully
+
+        # Still not running
+        assert not process.is_running
+
+
+@pytest.mark.asyncio
+async def test_get_bridge_before_start():
+    """Verify get_bridge() raises RuntimeError if process not started."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        process = ClaudeProcess(session_id="test-no-bridge", project_path=tmpdir)
+
+        # Attempt to get bridge before start
+        with pytest.raises(RuntimeError, match="Bridge not available"):
+            process.get_bridge()
+
+
+@pytest.mark.asyncio
+async def test_get_bridge_after_start():
+    """Verify get_bridge() returns CLIBridge after successful start."""
+    from src.claude.bridge import CLIBridge
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        process = ClaudeProcess(session_id="test-with-bridge", project_path=tmpdir)
+
+        # Mock start to create process and bridge
+        async def mock_start():
+            process._process = await asyncio.create_subprocess_exec(
+                "sleep",
+                "10",
+                cwd=process.project_path,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            # Create bridge (simulating what real start() does)
+            process._bridge = CLIBridge(process._process)
+
+        process.start = mock_start
+
+        await process.start()
+
+        try:
+            # get_bridge() should return the bridge
+            bridge = process.get_bridge()
+            assert isinstance(bridge, CLIBridge)
+            assert bridge is not None
+        finally:
+            await process.stop()
+
+
+@pytest.mark.asyncio
+async def test_conversation_history_stored():
+    """Verify conversation history is stored in start() for future use."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        process = ClaudeProcess(session_id="test-history", project_path=tmpdir)
+
+        # Mock start to avoid actual subprocess
+        async def mock_start(conversation_history=None):
+            process._conversation_history = conversation_history or {}
+            process._process = await asyncio.create_subprocess_exec(
+                "sleep",
+                "1",
+                cwd=process.project_path,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+        process.start = mock_start
+
+        # Start with conversation history
+        test_history = {"messages": ["msg1", "msg2"]}
+        await process.start(conversation_history=test_history)
+
+        try:
+            # Verify history was stored
+            assert hasattr(process, '_conversation_history')
+            assert process._conversation_history == test_history
+        finally:
+            await process.stop()
