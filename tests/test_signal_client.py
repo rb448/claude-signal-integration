@@ -295,3 +295,65 @@ class TestConnectionStateTransitions:
 
         # Verify state is DISCONNECTED
         assert client.reconnection_manager.state == ConnectionState.DISCONNECTED
+
+    @pytest.mark.asyncio
+    async def test_auto_reconnect_uses_syncing_state(self):
+        """Verify auto_reconnect uses SYNCING state during reconnection.
+
+        This test verifies CONN-03 requirement is satisfied:
+        State transitions: DISCONNECTED → RECONNECTING → SYNCING → CONNECTED
+        """
+        client = SignalClient()
+
+        # Track state transitions
+        state_transitions = []
+
+        original_transition = client.reconnection_manager.transition
+
+        def track_transition(state):
+            state_transitions.append(state)
+            original_transition(state)
+
+        client.reconnection_manager.transition = track_transition
+
+        # Set initial state to DISCONNECTED
+        client.reconnection_manager.state = ConnectionState.DISCONNECTED
+
+        # Mock connect to succeed on first attempt
+        async def mock_connect():
+            client._connected = True
+            client._session = MagicMock()
+
+        client.connect = mock_connect
+
+        # Set session_id so sync will be called
+        client.session_id = "test-session-123"
+
+        # Mock session_synchronizer.sync()
+        sync_called = False
+
+        async def mock_sync(session_id, local_context, remote_context):
+            nonlocal sync_called
+            sync_called = True
+            from src.session.sync import SyncResult
+            return SyncResult(changed=False, diff={}, merged_context={})
+
+        client.session_synchronizer.sync = mock_sync
+
+        # Mock asyncio.sleep to avoid delays
+        with patch('asyncio.sleep', new_callable=AsyncMock):
+            # Run auto_reconnect
+            await client.auto_reconnect()
+
+        # Verify state transitions occurred in correct order
+        assert state_transitions == [
+            ConnectionState.RECONNECTING,
+            ConnectionState.SYNCING,
+            ConnectionState.CONNECTED
+        ]
+
+        # Verify session_synchronizer.sync() was called
+        assert sync_called
+
+        # Verify final state is CONNECTED
+        assert client.reconnection_manager.state == ConnectionState.CONNECTED
