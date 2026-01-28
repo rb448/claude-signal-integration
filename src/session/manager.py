@@ -279,6 +279,47 @@ class SessionManager:
             history_length=len(conversation_history)
         )
 
+    async def track_activity(
+        self,
+        session_id: str,
+        activity_type: str,
+        details: dict
+    ) -> Session:
+        """
+        Track Claude activity in session context.
+
+        Args:
+            session_id: Session UUID
+            activity_type: Type of activity (e.g., "command_executed", "response_generated")
+            details: Activity details to store
+
+        Returns:
+            Updated session
+
+        Raises:
+            SessionNotFoundError: If session doesn't exist
+        """
+        session = await self.get(session_id)
+        if not session:
+            raise SessionNotFoundError(f"Session {session_id} not found")
+
+        # Add activity to context
+        context = session.context.copy()
+        if "activity_log" not in context:
+            context["activity_log"] = []
+
+        context["activity_log"].append({
+            "timestamp": datetime.now(UTC).isoformat(),
+            "type": activity_type,
+            "details": details
+        })
+
+        # Keep only last 10 activities (prevent unbounded growth)
+        context["activity_log"] = context["activity_log"][-10:]
+
+        # Update session
+        return await self.update(session_id, context=context)
+
     def _row_to_session(self, row: tuple) -> Session:
         """
         Convert database row to Session object.

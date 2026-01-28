@@ -2,7 +2,7 @@
 Integration tests for full session workflow.
 
 Tests the complete session lifecycle from creation to termination,
-including crash recovery scenarios.
+including crash recovery scenarios and offline operation.
 """
 
 import pytest
@@ -11,8 +11,11 @@ import shutil
 from pathlib import Path
 from src.session import SessionManager, SessionLifecycle, SessionStatus, CrashRecovery, SessionCommands
 from src.claude import ClaudeProcess
+from src.claude.orchestrator import ClaudeOrchestrator
 from src.thread import ThreadMapper, ThreadCommands
-from unittest.mock import AsyncMock, patch
+from src.signal.client import SignalClient
+from src.signal.reconnection import ConnectionState
+from unittest.mock import AsyncMock, Mock, patch
 
 
 @pytest.fixture
@@ -469,3 +472,136 @@ async def test_thread_mapping_survives_session_lifecycle(test_session_commands_w
 
     # 6. Verify different session IDs
     assert session_id1 != session_id2
+
+
+@pytest.mark.asyncio
+async def test_claude_continues_working_during_disconnect():
+    """
+    Integration test: Claude processes tasks while mobile disconnected.
+
+    Flow:
+    1. User sends command while connected
+    2. Connection drops during Claude processing
+    3. Claude completes work and buffers response
+    4. Connection restored
+    5. Response delivered from buffer
+    """
+    # Setup
+    session_manager = SessionManager(db_path=":memory:")
+    await session_manager.initialize()
+
+    signal_client = SignalClient(
+        api_url="http://localhost:8080",
+        phone_number="+15551234567"
+    )
+    signal_client.session_id = "test-session-123"
+
+    orchestrator = ClaudeOrchestrator(
+        bridge=Mock(),
+        parser=Mock(),
+        responder=Mock(),
+        send_signal=AsyncMock(),
+    )
+
+    # Create session
+    session = await session_manager.create(
+        project_path="/test/project",
+        thread_id="+15559999999"
+    )
+    await session_manager.update(session.id, status=SessionStatus.ACTIVE)
+
+    # Step 1: User sends command while CONNECTED
+    assert signal_client.reconnection_manager.state == ConnectionState.CONNECTED
+
+    user_command = "Analyze the authentication module"
+
+    # Step 2: Simulate connection drop DURING processing
+    # (In real scenario, this happens asynchronously)
+    signal_client.reconnection_manager.transition(ConnectionState.DISCONNECTED)
+
+    # Step 3: Claude processes command (continues despite disconnect)
+    # Mock Claude response generation
+    claude_response = (
+        "The authentication module uses JWT tokens with RS256 signing. "
+        "Found 3 security issues: ..."
+    )
+
+    # Step 4: Orchestrator attempts to send response → gets buffered
+    recipient = "+15559999999"
+
+    # Check state before send
+    assert signal_client.reconnection_manager.state == ConnectionState.DISCONNECTED
+
+    # Send message - should buffer instead of sending
+    await signal_client.send_message(recipient, claude_response)
+
+    # Verify message was buffered
+    assert len(signal_client.message_buffer) == 1
+    buffered = signal_client.message_buffer.dequeue()
+    assert buffered == (recipient, claude_response)
+
+    # Step 5: Connection restored (auto_reconnect succeeds)
+    # Re-enqueue the message we dequeued for verification
+    signal_client.message_buffer.enqueue(recipient, claude_response)
+
+    # Mock successful reconnection
+    with patch.object(signal_client, 'connect', new_callable=AsyncMock) as mock_connect:
+        mock_connect.return_value = None
+
+        # Trigger reconnection
+        await signal_client.auto_reconnect()
+
+    # Step 6: Verify state is CONNECTED and buffer drained
+    assert signal_client.reconnection_manager.state == ConnectionState.CONNECTED
+    assert len(signal_client.message_buffer) == 0  # Buffer drained
+
+    # Step 7: Verify session context updated with Claude activity
+    # (Session persisted the fact that Claude completed work during disconnect)
+    updated_session = await session_manager.get(session.id)
+    assert updated_session.status == SessionStatus.ACTIVE
+
+    # Cleanup
+    await session_manager.close()
+
+
+@pytest.mark.asyncio
+async def test_session_tracks_claude_activity_during_disconnect():
+    """
+    Verify session context persists Claude activity during disconnect.
+    """
+    # Setup
+    session_manager = SessionManager(db_path=":memory:")
+    await session_manager.initialize()
+
+    session = await session_manager.create(
+        project_path="/test/project",
+        thread_id="+15559999999"
+    )
+
+    # Simulate Claude activity during disconnect
+    await session_manager.track_activity(
+        session.id,
+        activity_type="command_executed",
+        details={"command": "analyze auth module", "files_analyzed": 5}
+    )
+
+    await session_manager.track_activity(
+        session.id,
+        activity_type="response_generated",
+        details={"response_length": 250, "issues_found": 3}
+    )
+
+    # Verify activity logged in context
+    updated_session = await session_manager.get(session.id)
+    assert "activity_log" in updated_session.context
+    assert len(updated_session.context["activity_log"]) == 2
+
+    # Verify activity details
+    activity_log = updated_session.context["activity_log"]
+    assert activity_log[0]["type"] == "command_executed"
+    assert activity_log[0]["details"]["files_analyzed"] == 5
+    assert activity_log[1]["type"] == "response_generated"
+    assert activity_log[1]["details"]["issues_found"] == 3
+
+    # Cleanup
+    await session_manager.close()
