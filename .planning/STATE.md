@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** Enable complete Claude Code functionality from mobile without requiring GitHub repos - users can continue development work with local directories while away from their desk.
-**Current focus:** Phase 7 — Connection Resilience
+**Current focus:** Phase 8 — Notification System
 
 ## Current Position
 
-Phase: 7 of 10 (Connection Resilience)
-Plan: 5 of 5
-Status: Phase complete
-Last activity: 2026-01-28 — Completed 07-05-PLAN.md (Offline Claude Operation)
+Phase: 8 of 10 (Notification System)
+Plan: 1 of 5
+Status: In progress
+Last activity: 2026-01-28 — Completed 08-01-PLAN.md (Event Categorization & Formatting)
 
-Progress: ████████████ 74% (7 phases complete, 5 of 5 plans in phase 7)
+Progress: ████████████░ 76% (7 phases complete, 1 of 5 plans in phase 8)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 37
-- Average duration: 8.3 min
-- Total execution time: 5.15 hours (308 min)
+- Total plans completed: 38
+- Average duration: 8.0 min
+- Total execution time: 5.18 hours (311 min)
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: ████████████ 74% (7 phases complete, 5 of 5 pl
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
+| 8 - Notification System | 1/5 | 3min | 3.0min |
 
 **Recent Trend:**
-- Last 5 plans: 64min (07-01), 0min (07-02), 12min (07-03), 15min (07-04), 17min (07-05)
-- Trend: Phase 7 complete - varied complexity (TDD 64min, integration 12-17min, pre-built 0min)
+- Last 5 plans: 0min (07-02), 12min (07-03), 15min (07-04), 17min (07-05), 3min (08-01)
+- Trend: Phase 8 started - TDD plan completed quickly (3min)
 
 ## Accumulated Context
 
@@ -187,6 +188,12 @@ Recent decisions affecting current work:
 | 10-activity limit for activity_log | 07-05 | Prevents unbounded context growth while preserving recent history | Context stays bounded, oldest activities dropped automatically |
 | Catch-up summary generation deferred to Phase 8 | 07-05 | Requires notification system for "back online" message before draining buffer | Infrastructure ready (activity_log), implementation when notification system exists |
 | activity_log structure: {timestamp, type, details} | 07-05 | Generic structure supports any activity type (commands, responses, file operations) | Flexible tracking without schema constraints |
+| UrgencyLevel as IntEnum with lower values = higher urgency | 08-01 | Natural ordering for priority-based filtering | URGENT=0, IMPORTANT=1, INFORMATIONAL=2, SILENT=3 enables comparison operations |
+| 300-char message limit for notifications | 08-01 | Mobile screen readability, consistent with Phase 3 decisions | Long messages truncated with "..." suffix |
+| Case-insensitive event type matching | 08-01 | Defensive design, handles "ERROR" vs "error" vs "Error" | event["type"].lower() used for all lookups |
+| Unknown event types default to INFORMATIONAL | 08-01 | Fail-safe default, better than dropping notifications | New event types automatically handled until categorization rule added |
+| SILENT urgency returns empty string | 08-01 | Explicit "no notification" support for future filtering | Formatter returns "" for SILENT events (no Signal message sent) |
+| Session IDs truncated to 8 chars in notifications | 08-01 | Follows Phase 2-6 convention, mobile-friendly display | "abc123de-f456-..." → "abc123de" in notifications |
 
 ### Pending Todos
 
@@ -198,6 +205,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 04:37 UTC
-Stopped at: Completed 07-05-PLAN.md (Offline Claude Operation)
+Last session: 2026-01-28 15:07 UTC
+Stopped at: Completed 08-01-PLAN.md (Event Categorization & Formatting)
 Resume file: None
