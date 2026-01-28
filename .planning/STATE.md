@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 8 of 10 (Notification System)
-Plan: 4 of 5
-Status: In progress
-Last activity: 2026-01-28 — Completed 08-04-PLAN.md (Notification Integration)
+Plan: 5 of 5
+Status: Phase complete
+Last activity: 2026-01-28 — Completed 08-05-PLAN.md (Catch-Up Summary)
 
-Progress: ████████████░ 82% (7 phases complete, 4 of 5 plans in phase 8)
+Progress: █████████████ 86% (8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41
-- Average duration: 7.5 min
-- Total execution time: 5.37 hours (322 min)
+- Total plans completed: 42
+- Average duration: 7.4 min
+- Total execution time: 5.42 hours (325 min)
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: ████████████░ 82% (7 phases complete, 4 of 5
 | 5 - Permission & Approval | 5/5 | 32.8min | 6.6min |
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
-| 8 - Notification System | 4/5 | 14min | 3.5min |
+| 8 - Notification System | 5/5 | 17min | 3.4min |
 
 **Recent Trend:**
-- Last 5 plans: 17min (07-05), 3min (08-01), 3min (08-02), 4min (08-03), 4min (08-04)
-- Trend: Phase 8 maintaining consistency - integration/wiring plans executing in 3-4min
+- Last 5 plans: 3min (08-01), 3min (08-02), 4min (08-03), 4min (08-04), 3min (08-05)
+- Trend: Phase 8 complete - all 5 plans executed in 3-4min (consistent integration/wiring work)
 
 ## Accumulated Context
 
@@ -211,6 +211,10 @@ Recent decisions affecting current work:
 | Error notifications on exception, completion notifications on success | 08-04 | Error notifications: after user-facing error sent; Completion: before method returns | Ensures user sees error message before notification arrives |
 | Notification system initialized in daemon run() after signal_client ready | 08-04 | async components need connection, follows Phase 4-5 pattern | notification_manager created when signal_client available for message sending |
 | thread_id from recipient as fallback in orchestrator | 08-04 | execute_command() uses thread_id parameter or falls back to recipient | Ensures notifications work even without explicit thread_id |
+| Catch-up summary generated atomically with activity_log clearing | 08-05 | generate_catchup_summary() clears activity_log after formatting to prevent duplicate summaries | Ensures one summary per reconnection, no repeated notifications |
+| Skip catch-up notification if no meaningful activity | 08-05 | Check for "No activity" in summary before calling notify() | Avoids noise when nothing happened during disconnect |
+| session_manager and notification_manager wired into SignalClient dynamically | 08-05 | Daemon sets attributes after component initialization using hasattr checks | Maintains decoupled architecture, SignalClient doesn't have direct dependencies |
+| Plain-English activity summary format with operation counts | 08-05 | Activity type-specific formatting (tool_call, command_executed) with "Ready to continue" message | Mobile-friendly readability consistent with notification patterns |
 
 ### Pending Todos
 
@@ -222,6 +226,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 15:22 UTC
-Stopped at: Completed 08-04-PLAN.md (Notification Integration)
+Last session: 2026-01-28 15:28 UTC
+Stopped at: Completed 08-05-PLAN.md (Catch-Up Summary) - Phase 8 complete
 Resume file: None
