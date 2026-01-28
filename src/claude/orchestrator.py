@@ -10,6 +10,7 @@ from .responder import SignalResponder, MessageBatcher
 
 if TYPE_CHECKING:
     from src.approval.workflow import ApprovalWorkflow
+    from src.notification.manager import NotificationManager
 
 
 class ClaudeOrchestrator:
@@ -50,6 +51,7 @@ class ClaudeOrchestrator:
         responder: SignalResponder,
         send_signal: Callable[[str, str], asyncio.Future],
         approval_workflow: Optional["ApprovalWorkflow"] = None,
+        notification_manager: Optional["NotificationManager"] = None,
     ):
         """
         Initialize ClaudeOrchestrator.
@@ -60,15 +62,18 @@ class ClaudeOrchestrator:
             responder: SignalResponder for formatting messages
             send_signal: Async callback to send Signal messages (recipient, message)
             approval_workflow: Optional ApprovalWorkflow for operation approval
+            notification_manager: Optional NotificationManager for event notifications
         """
         self.bridge = bridge
         self.parser = parser
         self.responder = responder
         self.send_signal = send_signal
         self.approval_workflow = approval_workflow
+        self.notification_manager = notification_manager
         self.session_id: Optional[str] = None
+        self.current_thread_id: Optional[str] = None
 
-    async def execute_command(self, command: str, session_id: str, recipient: str) -> None:
+    async def execute_command(self, command: str, session_id: str, recipient: str, thread_id: str | None = None) -> None:
         """
         Execute a command and stream results back to Signal.
 
@@ -76,6 +81,7 @@ class ClaudeOrchestrator:
             command: Command text to send to Claude CLI
             session_id: Session ID for routing responses
             recipient: Signal recipient (phone number) for attachment uploads
+            thread_id: Optional Signal thread ID for notifications
 
         Process:
         1. Send command via bridge
@@ -85,6 +91,7 @@ class ClaudeOrchestrator:
         5. Batch and send messages
         """
         self.session_id = session_id
+        self.current_thread_id = thread_id or recipient
 
         # Initialize message batcher
         batcher = MessageBatcher(min_batch_interval=self.BATCH_INTERVAL)
@@ -167,12 +174,30 @@ class ClaudeOrchestrator:
             # Flush any remaining messages
             await self._flush_batch(batcher)
 
+            # Send completion notification
+            if self.notification_manager and self.current_thread_id:
+                await self.notification_manager.notify(
+                    event_type="completion",
+                    details={"message": "Task finished", "status": "complete"},
+                    thread_id=self.current_thread_id,
+                    session_id=session_id
+                )
+
         except Exception as e:
             # Handle bridge errors and convert to user-facing error
             error_msg = self.responder.format(
                 self.parser.parse(f"Error: {str(e)}")
             )
             await self._send_message(error_msg)
+
+            # Send error notification
+            if self.notification_manager and self.current_thread_id:
+                await self.notification_manager.notify(
+                    event_type="error",
+                    details={"error": str(e), "context": "claude_stream"},
+                    thread_id=self.current_thread_id,
+                    session_id=self.session_id
+                )
 
     async def _flush_batch(self, batcher: MessageBatcher) -> None:
         """

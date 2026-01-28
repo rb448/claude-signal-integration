@@ -6,12 +6,15 @@ interface for approval workflow coordination.
 """
 
 import asyncio
-from typing import Tuple, Optional
+from typing import Tuple, Optional, TYPE_CHECKING
 
 from src.approval.detector import OperationDetector, OperationType
 from src.approval.manager import ApprovalManager
 from src.approval.models import ApprovalState
 from src.claude.parser import ToolCall
+
+if TYPE_CHECKING:
+    from src.notification.manager import NotificationManager
 
 
 class ApprovalWorkflow:
@@ -22,16 +25,23 @@ class ApprovalWorkflow:
     a single high-level interface.
     """
 
-    def __init__(self, detector: OperationDetector, manager: ApprovalManager):
+    def __init__(
+        self,
+        detector: OperationDetector,
+        manager: ApprovalManager,
+        notification_manager: Optional["NotificationManager"] = None
+    ):
         """
         Initialize approval workflow.
 
         Args:
             detector: OperationDetector for classifying operations
             manager: ApprovalManager for state tracking
+            notification_manager: Optional NotificationManager for approval notifications
         """
         self.detector = detector
         self.manager = manager
+        self.notification_manager = notification_manager
 
     def intercept(self, tool_call: ToolCall) -> Tuple[bool, Optional[str]]:
         """
@@ -62,6 +72,49 @@ class ApprovalWorkflow:
         request = self.manager.request(tool_call_dict, reason)
 
         return (False, request.id)
+
+    async def request_approval(
+        self,
+        tool_call: ToolCall,
+        thread_id: str,
+        session_id: str | None = None
+    ) -> str:
+        """
+        Request approval for a tool call and send notification.
+
+        Args:
+            tool_call: ToolCall object requiring approval
+            thread_id: Signal thread ID for notification
+            session_id: Optional session ID for context
+
+        Returns:
+            Approval request ID
+        """
+        # Classify operation
+        operation_type, reason = self.detector.classify(tool_call)
+
+        # Create approval request
+        tool_call_dict = {
+            "tool": tool_call.tool,
+            "target": tool_call.target,
+            "command": tool_call.command,
+        }
+        request = self.manager.request(tool_call_dict, reason)
+
+        # Send notification
+        if self.notification_manager:
+            await self.notification_manager.notify(
+                event_type="approval_needed",
+                details={
+                    "tool": tool_call.tool,
+                    "target": tool_call.target or tool_call.command,
+                    "approval_id": request.id[:8]
+                },
+                thread_id=thread_id,
+                session_id=session_id
+            )
+
+        return request.id
 
     async def wait_for_approval(self, request_id: str, timeout: int = 600) -> bool:
         """
