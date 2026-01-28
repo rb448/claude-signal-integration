@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 9 of 10 (Advanced Features & Emergency Mode)
-Plan: 4 of 5
-Status: In progress
-Last activity: 2026-01-28 — Completed 09-04-PLAN.md (Emergency Commands Integration)
+Plan: 5 of 5
+Status: Phase complete
+Last activity: 2026-01-28 — Completed 09-05-PLAN.md (Daemon Integration)
 
-Progress: ████████████████░ 84% (8 phases + 4 plans complete, 1 phase + 1 plan remaining)
+Progress: ████████████████░ 85% (9 phases complete, 1 phase remaining)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 46
+- Total plans completed: 47
 - Average duration: 7.0 min
-- Total execution time: 5.80 hours (348 min)
+- Total execution time: 5.95 hours (357 min)
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: ████████████████░ 84% (8 phases + 4 
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
 | 8 - Notification System | 5/5 | 17min | 3.4min |
-| 9 - Advanced Features | 4/5 | 22min | 5.5min |
+| 9 - Advanced Features | 5/5 | 31min | 6.2min |
 
 **Recent Trend:**
-- Last 5 plans: 5min (09-01), 4min (09-02), 6min (09-03), 7min (09-04)
-- Trend: Phase 9 progressing efficiently - TDD execution averaging 5.5min per plan
+- Last 5 plans: 4min (09-02), 6min (09-03), 7min (09-04), 9min (09-05)
+- Trend: Phase 9 complete - average 6.2min per plan, consistent with project velocity
 
 ## Accumulated Context
 
@@ -237,6 +237,12 @@ Recent decisions affecting current work:
 | Emergency auto-approval checked before creating approval request | 09-04 | Auto-approved tools should not create unnecessary approval requests | Returns None when auto-approved, approval request ID when not |
 | Optional emergency components in ApprovalWorkflow | 09-04 | Backwards compatibility for existing code without emergency mode | Works with or without emergency_auto_approver and emergency_mode parameters |
 | SAFE vs DESTRUCTIVE tool distinction maintained in emergency mode | 09-04 | Emergency mode streamlines workflow but maintains safety guardrails | Read operations fast, destructive operations still require approval |
+| Custom commands synced on daemon startup via initial_scan() | 09-05 | Load existing commands before daemon accepts messages | CommandSyncer.initial_scan() populates registry from ~/.claude/agents/ |
+| Emergency mode initialized in daemon __init__, state restored in run() | 09-05 | Components created early for wiring, async initialize() called when needed | EmergencyMode instance available for approval_workflow wiring |
+| Command routing priority: approval → emergency → notify → custom → thread → code → session → claude | 09-05 | Urgent operations first, then config, then operational, then content | Clear mental model prevents command conflicts |
+| File system watcher started in run(), stopped in shutdown | 09-05 | Clean lifecycle for background threads | CommandSyncer.start() and stop() called at appropriate daemon lifecycle points |
+| Emergency auto-approver wired into approval_workflow | 09-05 | Seamless emergency mode integration with existing approval flow | approval_workflow.emergency_auto_approver set before signal_client connects |
+| Startup logging with component metrics | 09-05 | Visibility into daemon initialization status | Log custom command count and emergency mode status (NORMAL/EMERGENCY) |
 
 ### Pending Todos
 
@@ -248,6 +254,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 16:38 UTC
-Stopped at: Completed 09-04-PLAN.md (Emergency Commands Integration)
+Last session: 2026-01-28 16:51 UTC
+Stopped at: Completed 09-05-PLAN.md (Daemon Integration) - Phase 9 complete
 Resume file: None
