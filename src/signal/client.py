@@ -10,6 +10,7 @@ import structlog
 from .rate_limiter import RateLimiter
 from .reconnection import ReconnectionManager, ConnectionState
 from .message_buffer import MessageBuffer
+from ..session.sync import SessionSynchronizer
 
 logger = structlog.get_logger(__name__)
 
@@ -36,6 +37,8 @@ class SignalClient:
         self.reconnection_manager = ReconnectionManager()
         self.message_buffer = MessageBuffer(max_size=100)
         self._reconnect_task: Optional[asyncio.Task] = None
+        self.session_synchronizer = SessionSynchronizer()
+        self.session_id: Optional[str] = None  # Set by daemon
 
     async def connect(self) -> None:
         """Establish HTTP connection to Signal API.
@@ -78,7 +81,7 @@ class SignalClient:
             logger.info("signal_api_disconnected")
 
     async def auto_reconnect(self) -> None:
-        """Automatically reconnect with exponential backoff."""
+        """Automatically reconnect with exponential backoff and state sync."""
         while self.reconnection_manager.state == ConnectionState.DISCONNECTED:
             # Transition to RECONNECTING
             self.reconnection_manager.transition(ConnectionState.RECONNECTING)
@@ -95,12 +98,52 @@ class SignalClient:
             # Attempt reconnection
             try:
                 await self.connect()
-                # Success - drain buffered messages
+
+                # Success - transition to SYNCING state
+                self.reconnection_manager.transition(ConnectionState.SYNCING)
+
+                # Synchronize session state (if session_id set)
+                if self.session_id:
+                    await self._sync_session_state()
+
+                # After sync, transition to CONNECTED
+                self.reconnection_manager.transition(ConnectionState.CONNECTED)
+
+                # Drain buffered messages
                 await self._drain_buffer()
                 break
             except ConnectionError:
                 # Failed - will retry
                 self.reconnection_manager.transition(ConnectionState.DISCONNECTED)
+
+    async def _sync_session_state(self) -> None:
+        """Synchronize session state after reconnection.
+
+        Note: This is a placeholder implementation. Full session state
+        synchronization requires SessionManager API access from SignalClient,
+        which will be implemented in future work.
+        """
+        # TODO: Fetch remote session context from SessionManager
+        # For now, this is a placeholder - full implementation requires
+        # SessionManager API access from SignalClient
+
+        # Placeholder: assume local context is current
+        local_context = {}  # Would fetch from SessionManager
+        remote_context = {}  # Would fetch from Claude API
+
+        result = await self.session_synchronizer.sync(
+            self.session_id,
+            local_context,
+            remote_context
+        )
+
+        if result.changed:
+            logger.info(
+                "session_state_synchronized",
+                session_id=self.session_id,
+                changes=len(result.diff)
+            )
+            # TODO: Update SessionManager with merged context
 
     async def _drain_buffer(self) -> None:
         """Send all buffered messages after reconnection."""
