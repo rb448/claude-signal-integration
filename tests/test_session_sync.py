@@ -50,3 +50,36 @@ class TestSessionSynchronizer:
         diff = synchronizer.calculate_diff(local_context, remote_context)
 
         assert diff == {}  # Local wins - no changes needed
+
+    def test_merge_applies_diff_correctly(self, synchronizer):
+        """Test that merge correctly applies diff to local context."""
+        local_context = {"a": 1, "b": 2}
+        diff = {"b": 3, "c": 4}
+
+        merged = synchronizer.merge(local_context, diff)
+
+        assert merged == {"a": 1, "b": 3, "c": 4}
+
+    @pytest.mark.asyncio
+    async def test_sync_returns_correct_result_when_changed(self, synchronizer):
+        """Test that sync returns correct result when contexts differ."""
+        local = {"last_output": "A"}
+        remote = {"last_output": "B"}
+
+        result = await synchronizer.sync("test-session-123", local, remote)
+
+        assert result.changed is True
+        assert result.diff == {"last_output": "B"}
+        assert result.merged_context == {"last_output": "B"}
+
+    @pytest.mark.asyncio
+    async def test_sync_returns_correct_result_when_unchanged(self, synchronizer):
+        """Test that sync returns correct result when contexts are identical."""
+        local = {"last_output": "A"}
+        remote = {"last_output": "A"}
+
+        result = await synchronizer.sync("test-session-123", local, remote)
+
+        assert result.changed is False
+        assert result.diff == {}
+        assert result.merged_context == {"last_output": "A"}
