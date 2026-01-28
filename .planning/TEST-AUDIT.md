@@ -622,3 +622,411 @@ Infrastructure and coordinator components appropriately skipped unit tests in fa
 **No retroactive testing required.** The project is ready for Phase 10 testing improvements building on this solid foundation.
 
 **Recommendation for Phase 10:** Focus on coverage gaps (see next section) rather than retroactive TDD compliance.
+
+---
+
+## Coverage Gaps Analysis
+
+**Overall Coverage:** 89% (2630 statements, 282 missed)
+**Tests Executed:** 497 passed, 1 skipped
+**Coverage Tool:** pytest-cov 7.0.0
+
+### Modules Below 80% Threshold
+
+| Module | Coverage | Priority | Missing Scenarios |
+|--------|----------|----------|-------------------|
+| **src/signal/client.py** | 55% | 🔴 CRITICAL | WebSocket connection errors, reconnection flows, message sending failures, receive loop edge cases |
+| **src/claude/process.py** | 70% | 🔴 CRITICAL | Subprocess failures, graceful shutdown edge cases, process crash handling |
+| **src/daemon/service.py** | 71% | 🔴 CRITICAL | Daemon startup failures, component initialization errors, shutdown sequence, health check edge cases |
+| **src/claude/orchestrator.py** | 73% | 🟡 MEDIUM | Streaming error handling, approval workflow integration edge cases, bridge communication failures |
+
+### Modules at 80-89% (Acceptable but Improvable)
+
+| Module | Coverage | Notes |
+|--------|----------|-------|
+| src/emergency/auto_committer.py | 82% | Git command failures, commit message edge cases |
+| src/notification/formatter.py | 87% | Event type edge cases, truncation scenarios |
+| src/signal/queue.py | 88% | Queue overflow edge cases |
+| src/claude/responder.py | 89% | Attachment upload failures, format edge cases |
+| src/claude/diff_processor.py | 90% | Malformed diff handling, binary file edge cases |
+
+### Modules at 90%+ (Excellent Coverage)
+
+**Perfect 100% Coverage (17 modules):**
+- src/approval/detector.py
+- src/approval/manager.py
+- src/auth/phone_verifier.py
+- src/claude/diff_renderer.py
+- src/claude/parser.py
+- src/claude/syntax_highlighter.py
+- src/emergency/auto_approver.py
+- src/notification/categorizer.py
+- src/notification/types.py
+- src/session/recovery.py
+- src/session/sync.py
+- src/signal/message_buffer.py
+- src/signal/rate_limiter.py
+- All __init__.py files
+
+**90-99% Coverage (High Quality):**
+- src/approval/commands.py - 92%
+- src/approval/workflow.py - 96%
+- src/claude/bridge.py - 91%
+- src/claude/code_formatter.py - 98%
+- src/custom_commands/commands.py - 99%
+- src/custom_commands/registry.py - 93%
+- src/custom_commands/syncer.py - 95%
+- src/emergency/commands.py - 95%
+- src/emergency/mode.py - 96%
+- src/notification/commands.py - 97%
+- src/notification/manager.py - 94%
+- src/notification/preferences.py - 98%
+- src/session/commands.py - 90%
+- src/session/lifecycle.py - 95%
+- src/session/manager.py - 92%
+- src/signal/attachment_handler.py - 95%
+- src/signal/reconnection.py - 96%
+- src/thread/commands.py - 95%
+- src/thread/mapper.py - 99%
+
+---
+
+## Detailed Gap Analysis
+
+### 1. SignalClient (55% - CRITICAL)
+
+**Missing Coverage (65 lines):**
+
+**Connection Management:**
+- Lines 51-73: WebSocket connection establishment error handling
+- Lines 77-81: Connection retry logic
+- Lines 111-119: Disconnection edge cases
+
+**Message Handling:**
+- Lines 158, 192: Message parsing errors
+- Lines 204-240: Message sending failures and retries
+- Lines 273-305: Receive loop exception handling
+- Lines 311-312, 322-329: Reconnection state transitions
+
+**Missing Test Scenarios:**
+1. WebSocket connection timeout
+2. Connection refused (Signal API down)
+3. Authentication failures during connection
+4. Network errors during message send
+5. Malformed message payloads
+6. Buffer overflow during high message volume
+7. Graceful shutdown during active receive
+8. Reconnection while messages queued
+
+**Impact:** Critical path for all Signal communication. Low coverage = production risk.
+
+**Priority:** P0 - Must address in Phase 10-02 (Integration Testing)
+
+---
+
+### 2. ClaudeProcess (70% - CRITICAL)
+
+**Missing Coverage (14 lines):**
+
+**Process Lifecycle:**
+- Lines 84-86: Process start failures (command not found, permission denied)
+- Lines 101-102, 105-106: stdout/stderr read errors
+- Lines 117-122: Graceful stop timeout and force kill
+- Lines 147-152: Process crash detection and recovery
+
+**Missing Test Scenarios:**
+1. Claude CLI not installed (subprocess.CalledProcessError)
+2. Insufficient permissions to execute
+3. Process exits unexpectedly mid-execution
+4. Timeout during process.wait()
+5. SIGTERM fails, SIGKILL required
+6. Pipe broken during stdout read
+7. Working directory doesn't exist
+
+**Impact:** Core component for Claude integration. Process failures could crash daemon.
+
+**Priority:** P0 - Must address in Phase 10-02 (Integration Testing)
+
+---
+
+### 3. Daemon Service (71% - CRITICAL)
+
+**Missing Coverage (65 lines):**
+
+**Initialization:**
+- Lines 140, 144-153: Component initialization failures
+- Lines 157-159: Database connection errors
+- Lines 177-178: Health server startup failures
+
+**Shutdown:**
+- Lines 188-215: Graceful shutdown edge cases
+- Lines 437-438, 460-461: Cleanup errors
+
+**Message Processing:**
+- Lines 342-355: Message routing errors
+- Lines 406-419: Command execution failures
+- Lines 467-500: Exception handling in receive loop
+
+**Missing Test Scenarios:**
+1. SessionManager initialization fails (database locked)
+2. SignalClient connection fails on startup
+3. Health server port already in use
+4. Shutdown requested while processing message
+5. Exception during message routing
+6. Cleanup fails for orphaned sessions
+7. launchd integration (start/stop signals)
+
+**Impact:** Main daemon service orchestration. Failures could prevent daemon startup.
+
+**Priority:** P0 - Must address in Phase 10-02 (Integration Testing)
+
+---
+
+### 4. ClaudeOrchestrator (73% - MEDIUM)
+
+**Missing Coverage (22 lines):**
+
+**Streaming:**
+- Lines 93-97: Stream initialization errors
+- Lines 109-132: Approval workflow integration edge cases
+- Lines 163, 170: Bridge communication failures
+
+**Error Handling:**
+- Lines 186, 228-229, 241-242: Exception propagation
+
+**Missing Test Scenarios:**
+1. Bridge returns None (process crashed)
+2. Approval workflow timeout
+3. Signal send fails during streaming
+4. Parser raises exception on malformed output
+5. Partial stream (connection lost mid-response)
+
+**Impact:** Orchestration layer. Some edge cases uncovered but core flows tested.
+
+**Priority:** P1 - Address in Phase 10-03 (Load Testing) or 10-04 (Chaos Testing)
+
+---
+
+## Cross-Reference with Phase 10 Requirements
+
+### TEST-01: Unit Tests with >80% Coverage
+**Status:** ✅ Overall 89%, but 4 critical modules below threshold
+**Gap:** SignalClient (55%), ClaudeProcess (70%), Daemon (71%), ClaudeOrchestrator (73%)
+**Remediation:** Phase 10-02 must add unit tests for these modules
+
+### TEST-02: Integration Tests for Signal ↔ Claude Flows
+**Status:** ⚠️ Partial - integration tests exist but don't cover error scenarios
+**Gap:** No tests for connection failures, process crashes, message send errors
+**Remediation:** Phase 10-02 (Integration Testing) must add error scenario coverage
+
+### TEST-03: Load Testing Infrastructure
+**Status:** ❌ No load tests exist
+**Gap:** No tests for concurrent sessions, high message volume, sustained load
+**Remediation:** Phase 10-03 must create load testing framework
+
+### TEST-04: Chaos Testing for Resilience
+**Status:** ❌ No chaos tests exist
+**Gap:** No tests for network failures, process kills, database locks
+**Remediation:** Phase 10-04 must add chaos testing scenarios
+
+### TEST-05: Mobile UX Validation
+**Status:** ✅ Strong - CodeFormatter (98%), DiffRenderer (100%), SyntaxHighlighter (100%)
+**Gap:** None - mobile formatting well-tested
+**Remediation:** None needed
+
+### TEST-06: Security Testing
+**Status:** ⚠️ Partial - auth tested (100%), but no security-focused integration tests
+**Gap:** No tests for injection, path traversal, privilege escalation
+**Remediation:** Phase 10-05 (Security Testing) must add security scenarios
+
+### TEST-07: Performance Benchmarks
+**Status:** ❌ No performance tests exist
+**Gap:** No benchmarks for message parsing, code formatting, state transitions
+**Remediation:** Phase 10-06 must create benchmark suite
+
+### TEST-08: Regression Suite
+**Status:** ✅ Good - 497 tests provide strong regression coverage
+**Gap:** Missing error scenario regression tests
+**Remediation:** Add to existing test suite in Phase 10-02
+
+---
+
+## Remediation Plan
+
+### Phase 10-02: Integration Testing (CRITICAL)
+
+**Objective:** Raise critical modules to >80% coverage
+
+**Tasks:**
+
+1. **SignalClient Integration Tests** (Priority: P0)
+   - Add test_connection_timeout
+   - Add test_connection_refused
+   - Add test_send_message_network_error
+   - Add test_receive_loop_exception_handling
+   - Add test_reconnection_during_send
+   - **Effort:** 1 plan, 8-12 test scenarios
+   - **Target:** 55% → 85%
+
+2. **ClaudeProcess Integration Tests** (Priority: P0)
+   - Add test_process_start_command_not_found
+   - Add test_process_crash_during_execution
+   - Add test_graceful_stop_timeout
+   - Add test_pipe_broken_during_read
+   - **Effort:** 1 plan, 6-8 test scenarios
+   - **Target:** 70% → 85%
+
+3. **Daemon Integration Tests** (Priority: P0)
+   - Add test_component_initialization_failures
+   - Add test_database_connection_error
+   - Add test_health_server_port_conflict
+   - Add test_shutdown_during_message_processing
+   - Add test_message_routing_exception_handling
+   - **Effort:** 1 plan, 10-12 test scenarios
+   - **Target:** 71% → 85%
+
+4. **ClaudeOrchestrator Integration Tests** (Priority: P1)
+   - Add test_bridge_returns_none
+   - Add test_approval_workflow_timeout
+   - Add test_streaming_partial_response
+   - **Effort:** 1 plan, 4-6 test scenarios
+   - **Target:** 73% → 85%
+
+**Total Effort:** 4 plans
+
+**Success Criteria:**
+- All modules ≥80% coverage
+- All Phase 10 requirements TEST-01, TEST-02 satisfied
+- No new skipped tests introduced
+
+---
+
+### Phase 10-03: Load Testing (MEDIUM)
+
+**Objective:** Validate performance under sustained load
+
+**Tasks:**
+
+1. Create load testing framework using pytest-benchmark or locust
+2. Add concurrent session tests (10, 50, 100 sessions)
+3. Add high message volume tests (1000 messages/min)
+4. Add sustained load tests (1 hour runtime)
+5. Measure and document:
+   - Message latency (p50, p95, p99)
+   - Memory usage over time
+   - CPU utilization
+   - Database connection pool saturation
+
+**Effort:** 1-2 plans
+
+**Success Criteria:**
+- TEST-03 requirement satisfied
+- Performance baselines documented
+- No memory leaks detected
+
+---
+
+### Phase 10-04: Chaos Testing (MEDIUM)
+
+**Objective:** Validate resilience to failures
+
+**Tasks:**
+
+1. Create chaos testing framework (manual or chaos-toolkit)
+2. Add network failure scenarios:
+   - Signal API becomes unreachable
+   - Network partition during send
+   - DNS resolution failures
+3. Add process failure scenarios:
+   - Kill Claude process mid-execution
+   - Kill daemon during message processing
+   - Database lock contention
+4. Verify recovery:
+   - Session recovery after crash
+   - Message buffer preservation
+   - Reconnection backoff behavior
+
+**Effort:** 1-2 plans
+
+**Success Criteria:**
+- TEST-04 requirement satisfied
+- All failure modes handled gracefully
+- No data loss during failures
+
+---
+
+### Phase 10-05: Security Testing (LOW)
+
+**Objective:** Validate security boundaries
+
+**Tasks:**
+
+1. Add injection tests:
+   - Command injection in Bash tool
+   - Path traversal in file operations
+   - SQL injection in database queries
+2. Add authentication tests:
+   - Unauthorized number attempts
+   - Session hijacking attempts
+   - Permission escalation
+3. Add data validation tests:
+   - Malformed Signal payloads
+   - Oversized messages
+   - Invalid phone number formats
+
+**Effort:** 1 plan
+
+**Success Criteria:**
+- TEST-06 requirement satisfied
+- No security vulnerabilities found
+- Input validation comprehensive
+
+---
+
+### Phase 10-06: Performance Benchmarks (LOW)
+
+**Objective:** Establish performance baselines
+
+**Tasks:**
+
+1. Add benchmarks for:
+   - Message parsing (OutputParser)
+   - Code formatting (CodeFormatter)
+   - Diff rendering (DiffRenderer)
+   - State transitions (SessionLifecycle)
+   - Database queries (SessionManager)
+2. Document baseline performance
+3. Set performance budgets (max execution time)
+
+**Effort:** 1 plan
+
+**Success Criteria:**
+- TEST-07 requirement satisfied
+- Baselines documented
+- Performance budgets established
+
+---
+
+## Summary
+
+**Current State:**
+- ✅ Overall 89% coverage (exceeds 80% target)
+- ✅ 94% TDD compliance across business logic
+- ✅ 497 comprehensive tests
+- ❌ 4 critical modules below 80%
+- ❌ Integration tests missing error scenarios
+- ❌ No load/chaos/performance testing
+
+**Required Work:**
+- **Critical (P0):** 4 plans to address coverage gaps (Phase 10-02)
+- **Medium (P1):** 2-4 plans for load and chaos testing (Phase 10-03, 10-04)
+- **Low (P2):** 2 plans for security and performance (Phase 10-05, 10-06)
+
+**Total Estimated Effort:** 8-10 plans across Phase 10
+
+**Recommendation:**
+1. **Immediate (10-02):** Focus on critical coverage gaps
+2. **Short-term (10-03, 10-04):** Add load and chaos testing
+3. **Long-term (10-05, 10-06):** Security and performance validation
+
+The project has an excellent testing foundation. Phase 10 should focus on hardening critical paths and validating resilience rather than retroactive TDD compliance.
