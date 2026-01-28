@@ -15,6 +15,8 @@ from src.claude.parser import ToolCall
 
 if TYPE_CHECKING:
     from src.notification.manager import NotificationManager
+    from src.emergency.auto_approver import EmergencyAutoApprover
+    from src.emergency.mode import EmergencyMode
 
 
 class ApprovalWorkflow:
@@ -29,7 +31,9 @@ class ApprovalWorkflow:
         self,
         detector: OperationDetector,
         manager: ApprovalManager,
-        notification_manager: Optional["NotificationManager"] = None
+        notification_manager: Optional["NotificationManager"] = None,
+        emergency_auto_approver: Optional["EmergencyAutoApprover"] = None,
+        emergency_mode: Optional["EmergencyMode"] = None
     ):
         """
         Initialize approval workflow.
@@ -38,10 +42,14 @@ class ApprovalWorkflow:
             detector: OperationDetector for classifying operations
             manager: ApprovalManager for state tracking
             notification_manager: Optional NotificationManager for approval notifications
+            emergency_auto_approver: Optional EmergencyAutoApprover for emergency mode
+            emergency_mode: Optional EmergencyMode for emergency state
         """
         self.detector = detector
         self.manager = manager
         self.notification_manager = notification_manager
+        self.emergency_auto_approver = emergency_auto_approver
+        self.emergency_mode = emergency_mode
 
     def intercept(self, tool_call: ToolCall) -> Tuple[bool, Optional[str]]:
         """
@@ -78,9 +86,11 @@ class ApprovalWorkflow:
         tool_call: ToolCall,
         thread_id: str,
         session_id: str | None = None
-    ) -> str:
+    ) -> str | None:
         """
         Request approval for a tool call and send notification.
+
+        In emergency mode, SAFE tools are auto-approved without creating a request.
 
         Args:
             tool_call: ToolCall object requiring approval
@@ -88,8 +98,14 @@ class ApprovalWorkflow:
             session_id: Optional session ID for context
 
         Returns:
-            Approval request ID
+            Approval request ID, or None if auto-approved
         """
+        # Check emergency auto-approval first
+        if self.emergency_auto_approver and self.emergency_mode:
+            if await self.emergency_auto_approver.should_auto_approve(tool_call.tool, self.emergency_mode):
+                # Auto-approved - no request needed
+                return None
+
         # Classify operation
         operation_type, reason = self.detector.classify(tool_call)
 
