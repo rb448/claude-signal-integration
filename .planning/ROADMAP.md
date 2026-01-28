@@ -36,7 +36,8 @@ Each phase includes a **TDD Strategy** section specifying:
 - [ ] **Phase 8: Notification System** - Configurable push notifications
 - [ ] **Phase 9: Advanced Features** - Custom commands and emergency mode
 - [x] **Phase 10: Testing & Quality** - Comprehensive test suite and CI/CD
-- [ ] **Phase 11: Claude Integration Wiring Fixes** - Restore primary user flow (gap closure)
+- [x] **Phase 11: Claude Integration Wiring Fixes** - Restore primary user flow (gap closure)
+- [ ] **Phase 12: Test Coverage Improvement** - Unit tests for critical modules (quality enhancement)
 
 ## Phase Details
 
@@ -456,7 +457,38 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 11-01: Fix execute_command wiring and response routing
+- [x] 11-01: Fix execute_command wiring and response routing
+
+### Phase 12: Test Coverage Improvement
+**Goal**: Improve unit test coverage for 4 critical modules from below 80% to 85%+
+**Depends on**: Phase 10 (requires test infrastructure)
+**Requirements**: Quality enhancement (improves TEST-01)
+**Success Criteria** (what must be TRUE):
+  1. SignalClient coverage ≥85% (from 55%)
+  2. ClaudeProcess coverage ≥85% (from 70%)
+  3. Daemon coverage ≥85% (from 71%)
+  4. Orchestrator coverage ≥85% (from 73%)
+  5. Overall coverage ≥90% (from 89%)
+**TDD Strategy**: Test-first for uncovered code paths
+  - **TDD (write tests FIRST):**
+    - Unit tests for error paths in SignalClient (reconnection failures, state races)
+    - Unit tests for error paths in ClaudeProcess (spawn failures, SIGKILL timeout)
+    - Unit tests for error paths in Daemon (component init failures, concurrent operations)
+    - Unit tests for error paths in Orchestrator (bridge errors, approval timeouts)
+  - **Verification (after tests pass):**
+    - Run coverage report to verify ≥85% per module
+    - Run full test suite to ensure no regressions
+  - **Test-first execution order:**
+    1. Analyze coverage reports to identify uncovered lines
+    2. Write failing unit test for uncovered error path
+    3. Verify test passes against existing implementation
+    4. Repeat for all 20 tests (5 per module)
+    5. Run full coverage report to confirm improvements
+**Research**: Not needed (testing existing code paths)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 12-01: Unit Test Coverage for Critical Modules
 
 ## Progress
 
@@ -476,3 +508,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 | 9. Advanced Features | 5/5 | Complete | 2026-01-28 |
 | 10. Testing & Quality | 5/5 | Complete | 2026-01-28 |
 | 11. Wiring Fixes | 1/1 | Complete | 2026-01-28 |
+| 12. Test Coverage | 0/1 | Pending | - |
