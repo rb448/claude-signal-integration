@@ -234,7 +234,12 @@ class SessionCommands:
             return "Error: Claude orchestrator not initialized"
 
         # Execute command via orchestrator (async, responses streamed back via orchestrator)
-        await self.orchestrator.execute_command(message, session_id)
+        await self.orchestrator.execute_command(
+            command=message,
+            session_id=session_id,
+            recipient=thread_id,
+            thread_id=thread_id
+        )
 
         # Return None to indicate orchestrator is handling responses
         return None
