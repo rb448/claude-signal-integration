@@ -77,10 +77,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Advanced Features
 
-- [ ] **ADV-01**: System syncs user's ~/.claude/agents/ custom commands to mobile
-- [ ] **ADV-02**: User can invoke custom slash commands from Signal with autocomplete
-- [ ] **ADV-03**: User can activate emergency fix mode for streamlined production incident response
-- [ ] **ADV-04**: Emergency fix mode pre-approves safe operations and auto-commits changes
+- [x] **ADV-01**: System syncs user's ~/.claude/agents/ custom commands to mobile
+- [x] **ADV-02**: User can invoke custom slash commands from Signal with autocomplete
+- [x] **ADV-03**: User can activate emergency fix mode for streamlined production incident response
+- [x] **ADV-04**: Emergency fix mode pre-approves safe operations and auto-commits changes
 
 ### Testing & Quality (TDD Framework)
 
@@ -190,10 +190,10 @@ Which phases cover which requirements. Updated by create-roadmap.
 | NOTF-02 | Phase 8 | Complete |
 | NOTF-03 | Phase 8 | Complete |
 | NOTF-04 | Phase 8 | Complete |
-| ADV-01 | Phase 9 | Pending |
-| ADV-02 | Phase 9 | Pending |
-| ADV-03 | Phase 9 | Pending |
-| ADV-04 | Phase 9 | Pending |
+| ADV-01 | Phase 9 | Complete |
+| ADV-02 | Phase 9 | Complete |
+| ADV-03 | Phase 9 | Complete |
+| ADV-04 | Phase 9 | Complete |
 | TEST-01 | Phase 10 | Pending |
 | TEST-02 | Phase 10 | Pending |
 | TEST-03 | Phase 10 | Pending |

@@ -365,10 +365,15 @@ Plans:
     11. Write failing tests for AutoCommitFormatter.format(changes) → commit_msg
     12. Implement formatter to pass tests
 **Research**: Unlikely (custom command sync is file system operation)
-**Plans**: TBD
+**Plans**: 5 plans
+**Completed**: 2026-01-28
 
 Plans:
-- [ ] 09-01: TBD during phase planning
+- [x] 09-01: Custom Command Sync (Registry + Syncer)
+- [x] 09-02: Emergency Mode Core (State Machine + Auto-Approver + Auto-Committer)
+- [x] 09-03: Custom Command Interface (/custom list/show/invoke)
+- [x] 09-04: Emergency Commands Integration (/emergency activate/deactivate)
+- [x] 09-05: Daemon Integration & Command Routing
 
 ### Phase 10: Testing & Quality Validation
 **Goal**: Comprehensive test coverage with automated CI/CD
@@ -430,5 +435,5 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 | 6. Code Display | 6/6 | Complete | 2026-01-26 |
 | 7. Connection Resilience | 5/5 | Complete | 2026-01-28 |
 | 8. Notifications | 5/5 | Complete | 2026-01-28 |
-| 9. Advanced Features | 0/TBD | Not started | - |
+| 9. Advanced Features | 5/5 | Complete | 2026-01-28 |
 | 10. Testing & Quality | 0/TBD | Not started | - |
