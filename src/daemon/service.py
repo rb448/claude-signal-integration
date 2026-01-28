@@ -260,6 +260,8 @@ class ServiceDaemon:
             # Wire notification manager into components
             self.claude_orchestrator.notification_manager = self.notification_manager
             self.approval_workflow.notification_manager = self.notification_manager
+            self.signal_client.session_manager = self.session_manager
+            self.signal_client.notification_manager = self.notification_manager
 
             # Wire notification commands
             notification_commands = NotificationCommands(self.notification_prefs)

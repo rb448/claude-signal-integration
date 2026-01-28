@@ -106,6 +106,23 @@ class SignalClient:
                 if self.session_id:
                     await self._sync_session_state()
 
+                # Generate and send catch-up summaries for active sessions
+                if hasattr(self, 'session_manager') and hasattr(self, 'notification_manager'):
+                    active_sessions = await self.session_manager.list()
+                    for session in active_sessions:
+                        if session.status.value == "ACTIVE":
+                            # Generate summary
+                            summary = await self.session_manager.generate_catchup_summary(session.id)
+
+                            # Send as notification (only if summary is meaningful)
+                            if summary and "No activity" not in summary:
+                                await self.notification_manager.notify(
+                                    event_type="reconnection",
+                                    details={"summary": summary, "session_id": session.id[:8]},
+                                    thread_id=session.thread_id,
+                                    session_id=session.id
+                                )
+
                 # After sync, transition to CONNECTED
                 self.reconnection_manager.transition(ConnectionState.CONNECTED)
 

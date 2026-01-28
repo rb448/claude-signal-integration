@@ -131,6 +131,12 @@ class NotificationFormatter:
             return "Processing..."
 
         elif event_type == "reconnection":
+            # Check for catch-up summary first
+            summary = details.get("summary", "")
+            if summary:
+                return summary
+
+            # Fall back to connection state info
             state = details.get("state", "")
             attempt = details.get("attempt", "")
             if state and attempt:
