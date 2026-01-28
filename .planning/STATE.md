@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 9 of 10 (Advanced Features & Emergency Mode)
-Plan: Not started
-Status: Planning needed
-Last activity: 2026-01-28 — Completed Phase 8 (Notification System)
+Plan: 2 of 5
+Status: In progress
+Last activity: 2026-01-28 — Completed 09-02-PLAN.md (Emergency Mode Core)
 
-Progress: ████████████████ 80% (8 phases complete, 2 remaining)
+Progress: ████████████████░ 82% (8 phases + 2 plans complete, 1 phase + 3 plans remaining)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 42
-- Average duration: 7.4 min
-- Total execution time: 5.42 hours (325 min)
+- Total plans completed: 44
+- Average duration: 7.1 min
+- Total execution time: 5.53 hours (329 min)
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: ████████████████ 80% (8 phases complet
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
 | 8 - Notification System | 5/5 | 17min | 3.4min |
+| 9 - Advanced Features | 2/5 | 4min | 2.0min |
 
 **Recent Trend:**
-- Last 5 plans: 3min (08-01), 3min (08-02), 4min (08-03), 4min (08-04), 3min (08-05)
-- Trend: Phase 8 complete - efficient execution (all plans <5min, strong TDD foundation)
-- Trend: Phase 8 complete - all 5 plans executed in 3-4min (consistent integration/wiring work)
+- Last 5 plans: 3min (08-03), 4min (08-04), 3min (08-05), 0min (09-01), 4min (09-02)
+- Trend: Phase 9 started - fast TDD execution (09-02 completed in 4min)
 
 ## Accumulated Context
 
@@ -216,6 +216,12 @@ Recent decisions affecting current work:
 | Skip catch-up notification if no meaningful activity | 08-05 | Check for "No activity" in summary before calling notify() | Avoids noise when nothing happened during disconnect |
 | session_manager and notification_manager wired into SignalClient dynamically | 08-05 | Daemon sets attributes after component initialization using hasattr checks | Maintains decoupled architecture, SignalClient doesn't have direct dependencies |
 | Plain-English activity summary format with operation counts | 08-05 | Activity type-specific formatting (tool_call, command_executed) with "Ready to continue" message | Mobile-friendly readability consistent with notification patterns |
+| EmergencyStatus as IntEnum with NORMAL=0, EMERGENCY=1 | 09-02 | Integer storage in SQLite, follows Phase 2/7 patterns | Efficient database queries, clear boolean semantics via is_active() |
+| Single-row state storage with CHECK constraint (id=1) for emergency mode | 09-02 | Emergency mode is global singleton state, not per-session | Simple queries without WHERE clauses, enforced at database level |
+| Idempotent emergency mode activate/deactivate | 09-02 | Safe retry logic, prevents race conditions | Activating when EMERGENCY is no-op, original thread preserved |
+| Auto-approval only for SAFE tools in emergency mode | 09-02 | Emergency mode streamlines workflow but maintains safety guardrails | Read operations fast, destructive operations still require approval |
+| Auto-commit uses asyncio.create_subprocess_exec | 09-02 | Prevents shell injection (Phase 2 pattern), safe subprocess execution | Secure git operations, no risk of command injection |
+| [EMERGENCY] prefix in auto-commit messages | 09-02 | Clear visual indicator of emergency mode commits in git history | Easy to identify emergency changes, supports audit trail |
 
 ### Pending Todos
 
@@ -227,6 +233,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 15:28 UTC
-Stopped at: Completed 08-05-PLAN.md (Catch-Up Summary) - Phase 8 complete
+Last session: 2026-01-28 16:27 UTC
+Stopped at: Completed 09-02-PLAN.md (Emergency Mode Core)
 Resume file: None
