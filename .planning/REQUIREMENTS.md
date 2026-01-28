@@ -194,14 +194,14 @@ Which phases cover which requirements. Updated by create-roadmap.
 | ADV-02 | Phase 9 | Complete |
 | ADV-03 | Phase 9 | Complete |
 | ADV-04 | Phase 9 | Complete |
-| TEST-01 | Phase 10 | Pending |
-| TEST-02 | Phase 10 | Pending |
-| TEST-03 | Phase 10 | Pending |
-| TEST-04 | Phase 10 | Pending |
-| TEST-05 | Phase 10 | Pending |
-| TEST-06 | Phase 10 | Pending |
-| TEST-07 | Phase 10 | Pending |
-| TEST-08 | Phase 10 | Pending |
+| TEST-01 | Phase 10 | Complete |
+| TEST-02 | Phase 10 | Complete |
+| TEST-03 | Phase 10 | Complete |
+| TEST-04 | Phase 10 | Complete |
+| TEST-05 | Phase 10 | Complete |
+| TEST-06 | Phase 10 | Complete |
+| TEST-07 | Phase 10 | Complete |
+| TEST-08 | Phase 10 | Complete |
 
 **Coverage:**
 - v1 requirements: 56 total
