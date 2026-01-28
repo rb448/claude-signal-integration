@@ -320,6 +320,65 @@ class SessionManager:
         # Update session
         return await self.update(session_id, context=context)
 
+    async def generate_catchup_summary(self, session_id: str) -> str:
+        """
+        Generate plain-English summary of Claude's offline work from activity_log.
+        Called after reconnection before draining message buffer.
+
+        Returns summary like:
+        "While you were away, Claude completed 5 operations:
+        - Read config.json (247 lines)
+        - Modified src/main.py (23 lines changed)
+        - Ran tests (12 passed)
+        - Created docs/README.md (50 lines)
+        - Committed changes to git
+
+        Ready to continue!"
+
+        Args:
+            session_id: Session UUID
+
+        Returns:
+            Formatted summary string
+
+        Raises:
+            SessionNotFoundError: If session doesn't exist
+        """
+        session = await self.get(session_id)
+        if not session:
+            return "Session not found"
+
+        activity_log = session.context.get("activity_log", [])
+        if not activity_log:
+            return "No activity while disconnected"
+
+        # Format summary
+        count = len(activity_log)
+        summary_lines = [f"While you were away, Claude completed {count} operation{'s' if count != 1 else ''}:"]
+
+        for activity in activity_log:
+            # activity: {"timestamp": str, "type": str, "details": dict}
+            activity_type = activity.get("type", "unknown")
+            details = activity.get("details", {})
+
+            # Format based on activity type
+            if activity_type == "tool_call":
+                tool = details.get("tool", "unknown")
+                target = details.get("target", "")
+                summary_lines.append(f"- {tool} {target}")
+            elif activity_type == "command_executed":
+                command = details.get("command", "unknown")
+                summary_lines.append(f"- Executed: {command}")
+            else:
+                summary_lines.append(f"- {activity_type}")
+
+        summary_lines.append("\nReady to continue!")
+
+        # Clear activity log after generating summary
+        await self.update_context(session_id, {"activity_log": []})
+
+        return "\n".join(summary_lines)
+
     def _row_to_session(self, row: tuple) -> Session:
         """
         Convert database row to Session object.
