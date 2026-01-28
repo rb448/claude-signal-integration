@@ -22,6 +22,10 @@ from ..approval.detector import OperationDetector
 from ..approval.manager import ApprovalManager
 from ..approval.workflow import ApprovalWorkflow
 from ..approval.commands import ApprovalCommands
+from ..notification.categorizer import EventCategorizer
+from ..notification.preferences import NotificationPreferences
+from ..notification.manager import NotificationManager
+from ..notification.commands import NotificationCommands
 
 logger = structlog.get_logger(__name__)
 
@@ -63,8 +67,16 @@ class ServiceDaemon:
         # Get data directory from session manager pattern
         from pathlib import Path
         data_dir = Path.home() / "Library" / "Application Support" / "claude-signal-bot"
+        self.data_dir = data_dir
         thread_db_path = data_dir / "thread_mappings.db"
         self.thread_mapper = ThreadMapper(str(thread_db_path))
+
+        # Notification system (Phase 8)
+        self.notification_categorizer = EventCategorizer()
+        self.notification_prefs = NotificationPreferences(
+            str(data_dir / "notification_prefs.db")
+        )
+        # notification_manager will be created in run() after signal_client is ready
 
         # Approval system
         self.approval_detector = OperationDetector()
@@ -231,6 +243,33 @@ class ServiceDaemon:
                 safe_tools=len(self.approval_detector.SAFE_TOOLS),
                 destructive_tools=len(self.approval_detector.DESTRUCTIVE_TOOLS),
                 pending_approvals=len(self.approval_manager.list_pending())
+            )
+
+            # Initialize notification preferences database
+            await self.notification_prefs.initialize()
+            logger.info("notification_system_initialized")
+
+            # Create notification manager (requires signal_client)
+            self.notification_manager = NotificationManager(
+                categorizer=self.notification_categorizer,
+                preferences=self.notification_prefs,
+                signal_client=self.signal_client,
+                authorized_number=self.phone_verifier.authorized_number
+            )
+
+            # Wire notification manager into components
+            self.claude_orchestrator.notification_manager = self.notification_manager
+            self.approval_workflow.notification_manager = self.notification_manager
+
+            # Wire notification commands
+            notification_commands = NotificationCommands(self.notification_prefs)
+            self.session_commands.notification_commands = notification_commands
+
+            # Log notification system readiness
+            logger.info(
+                "notification_system_ready",
+                categorizer_rules=len(EventCategorizer.URGENCY_RULES),
+                default_prefs={"URGENT": True, "IMPORTANT": True, "INFORMATIONAL": False}
             )
 
             # Run crash recovery

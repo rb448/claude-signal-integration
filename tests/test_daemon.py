@@ -347,3 +347,70 @@ async def test_daemon_startup_initializes_approval_system(capsys):
 
         # Cleanup
         await daemon.thread_mapper.close()
+
+
+@pytest.mark.asyncio
+async def test_daemon_startup_initializes_notification_system(capsys):
+    """
+    Verify daemon initializes notification system on startup.
+
+    Verifies that the daemon:
+    1. Creates notification components (categorizer, preferences, manager)
+    2. Wires notification_manager into orchestrator and approval_workflow
+    3. Wires notification_commands into session_commands
+    4. Logs notification system initialization
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create daemon
+        daemon = ServiceDaemon()
+        daemon.thread_mapper = ThreadMapper(str(Path(tmpdir) / "thread_mappings.db"))
+
+        # Mock dependencies to prevent actual connections
+        daemon.signal_client = AsyncMock()
+        daemon.signal_client.connect = AsyncMock(side_effect=ConnectionError("Mock stop"))
+        daemon.signal_client.api_url = "ws://mock:8080"
+        daemon.session_manager = AsyncMock()
+        daemon.session_manager.initialize = AsyncMock()
+        daemon.session_manager.close = AsyncMock()
+        daemon.crash_recovery = AsyncMock()
+        daemon.crash_recovery.recover = AsyncMock(return_value=[])
+
+        # Mock health server to prevent port conflicts
+        daemon._start_health_server = AsyncMock()
+        daemon._stop_health_server = AsyncMock()
+
+        # Run daemon briefly (will fail at signal_client.connect, which is expected)
+        try:
+            await daemon.run()
+        except (ConnectionError, AttributeError):
+            pass  # Expected - daemon stops at mocked connection failure
+
+        # Verify: Notification components exist
+        assert daemon.notification_categorizer is not None, \
+            "notification_categorizer should be initialized"
+        assert daemon.notification_prefs is not None, \
+            "notification_prefs should be initialized"
+        assert hasattr(daemon, 'notification_manager'), \
+            "notification_manager should be created in run()"
+
+        # Verify: Notification manager wired into components
+        assert daemon.claude_orchestrator.notification_manager is not None, \
+            "notification_manager should be wired into orchestrator"
+        assert daemon.approval_workflow.notification_manager is not None, \
+            "notification_manager should be wired into approval_workflow"
+
+        # Verify: Notification commands wired into session commands
+        assert daemon.session_commands.notification_commands is not None, \
+            "notification_commands should be wired into session_commands"
+
+        # Verify: Startup logging
+        captured = capsys.readouterr()
+        assert "notification_system_initialized" in captured.out, \
+            "Should log notification_system_initialized message"
+        assert "notification_system_ready" in captured.out, \
+            "Should log notification_system_ready message"
+
+        # Cleanup
+        await daemon.thread_mapper.close()
+        if hasattr(daemon, 'notification_prefs') and daemon.notification_prefs._connection:
+            await daemon.notification_prefs.close()
