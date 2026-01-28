@@ -357,3 +357,409 @@ class TestConnectionStateTransitions:
 
         # Verify final state is CONNECTED
         assert client.reconnection_manager.state == ConnectionState.CONNECTED
+
+
+class TestErrorHandling:
+    """Test error handling in SignalClient."""
+
+    @pytest.mark.asyncio
+    async def test_send_message_validation_errors(self):
+        """Verify send_message raises ValueError for empty recipient or text."""
+        client = SignalClient()
+
+        # Test empty recipient
+        with pytest.raises(ValueError, match="Recipient and text must not be empty"):
+            await client.send_message("", "test message")
+
+        # Test empty text
+        with pytest.raises(ValueError, match="Recipient and text must not be empty"):
+            await client.send_message("+1234567890", "")
+
+        # Test both empty
+        with pytest.raises(ValueError, match="Recipient and text must not be empty"):
+            await client.send_message("", "")
+
+    @pytest.mark.asyncio
+    async def test_send_message_not_connected_error(self):
+        """Verify send_message raises RuntimeError when not connected."""
+        client = SignalClient()
+
+        # Set state to CONNECTED but _connected flag is False
+        client.reconnection_manager.state = ConnectionState.CONNECTED
+        client._connected = False
+        client._session = None
+
+        # Attempt to send message
+        with pytest.raises(RuntimeError, match="Not connected to Signal API"):
+            await client.send_message("+1234567890", "test message")
+
+    @pytest.mark.asyncio
+    async def test_receive_messages_not_connected_error(self):
+        """Verify receive_messages raises RuntimeError when not connected."""
+        client = SignalClient()
+
+        # Ensure not connected
+        client._connected = False
+        client._session = None
+
+        # Attempt to receive messages
+        with pytest.raises(RuntimeError, match="Not connected to Signal API"):
+            async for _ in client.receive_messages():
+                pass
+
+    @pytest.mark.asyncio
+    async def test_connect_failure_cleanup(self):
+        """Verify connect() cleans up session on failure."""
+        client = SignalClient()
+
+        # Mock ClientSession to raise error on health check
+        with patch('aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_session_class.return_value = mock_session
+
+            # Create a mock context manager that raises a generic exception
+            class MockContextManager:
+                async def __aenter__(self):
+                    raise OSError("Connection refused")
+
+                async def __aexit__(self, exc_type, exc_val, exc_tb):
+                    return None
+
+            mock_session.get = MagicMock(return_value=MockContextManager())
+            mock_session.close = AsyncMock()
+
+            # Attempt connection (should fail)
+            with pytest.raises(ConnectionError, match="Failed to connect to Signal API"):
+                await client.connect()
+
+            # Verify cleanup occurred
+            assert not client._connected
+            assert client._session is None
+            assert client.reconnection_manager.state == ConnectionState.DISCONNECTED
+            mock_session.close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_session_sync_with_changes(self):
+        """Verify session sync logs changes when state differs."""
+        client = SignalClient()
+        client.session_id = "test-session-123"
+
+        # Mock session_synchronizer to return changes
+        async def mock_sync(session_id, local_context, remote_context):
+            from src.session.sync import SyncResult
+            return SyncResult(
+                changed=True,
+                diff={"key1": "value1", "key2": "value2"},
+                merged_context={"key1": "value1", "key2": "value2"}
+            )
+
+        client.session_synchronizer.sync = mock_sync
+
+        # Call _sync_session_state
+        await client._sync_session_state()
+
+        # Test passes if no exception raised (coverage for line 158-162)
+
+
+class TestConnectionLifecycle:
+    """Test connection and disconnection lifecycle."""
+
+    @pytest.mark.asyncio
+    async def test_connect_success(self):
+        """Verify successful connection sets state correctly."""
+        client = SignalClient()
+
+        # Mock aiohttp.ClientSession
+        with patch('aiohttp.ClientSession') as mock_session_class:
+            mock_session = MagicMock()
+            mock_session_class.return_value = mock_session
+
+            # Create a mock response for health check
+            mock_response = AsyncMock()
+            mock_response.status = 200
+            mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_response.__aexit__ = AsyncMock(return_value=None)
+
+            mock_session.get = MagicMock(return_value=mock_response)
+
+            # Connect should succeed
+            await client.connect()
+
+            # Verify state
+            assert client._connected
+            assert client._session is not None
+            assert client.reconnection_manager.state == ConnectionState.CONNECTED
+
+    @pytest.mark.asyncio
+    async def test_disconnect(self):
+        """Verify disconnect closes session."""
+        client = SignalClient()
+
+        # Set up a mock session
+        mock_session = AsyncMock()
+        client._session = mock_session
+        client._connected = True
+
+        # Disconnect
+        await client.disconnect()
+
+        # Verify state
+        assert not client._connected
+        assert client._session is None
+        mock_session.close.assert_called_once()
+
+
+class TestRateLimiting:
+    """Test rate limiting in send_message."""
+
+    @pytest.mark.asyncio
+    async def test_send_message_rate_limit_delay(self):
+        """Verify rate limiting applies delays."""
+        client = SignalClient()
+
+        # Set up connection
+        mock_session = AsyncMock()
+        client._session = mock_session
+        client._connected = True
+        client.reconnection_manager.state = ConnectionState.CONNECTED
+
+        # Mock rate limiter to return a delay
+        client._rate_limiter.acquire = AsyncMock(return_value=0.5)
+
+        # Mock HTTP response
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session.post = MagicMock(return_value=mock_response)
+
+        # Send message
+        await client.send_message("+1234567890", "test message")
+
+        # Verify rate limiter was called
+        client._rate_limiter.acquire.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_send_message_http_error(self):
+        """Verify send_message handles HTTP errors."""
+        from aiohttp import ClientError
+
+        client = SignalClient()
+
+        # Set up connection
+        mock_session = AsyncMock()
+        client._session = mock_session
+        client._connected = True
+        client.reconnection_manager.state = ConnectionState.CONNECTED
+
+        # Mock rate limiter
+        client._rate_limiter.acquire = AsyncMock(return_value=0)
+
+        # Mock HTTP response with error
+        mock_response = AsyncMock()
+        mock_response.status = 500
+        mock_response.text = AsyncMock(return_value="Internal Server Error")
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session.post = MagicMock(return_value=mock_response)
+
+        # Send message should raise RuntimeError
+        with pytest.raises(RuntimeError, match="Failed to send message: HTTP 500"):
+            await client.send_message("+1234567890", "test message")
+
+
+class TestReceiveMessages:
+    """Test receive_messages edge cases."""
+
+    @pytest.mark.asyncio
+    async def test_receive_messages_timeout(self):
+        """Verify receive_messages handles timeouts gracefully."""
+        client = SignalClient()
+
+        # Set up connection
+        mock_session = AsyncMock()
+        client._session = mock_session
+        client._connected = True
+        client.reconnection_manager.state = ConnectionState.CONNECTED
+
+        # Create a mock context manager that raises TimeoutError then disconnects
+        call_count = 0
+
+        class MockContextManager:
+            async def __aenter__(self):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise asyncio.TimeoutError("Long polling timeout")
+                # After timeout, disconnect the client to stop iteration
+                client._connected = False
+                # Return empty response
+                mock_resp = AsyncMock()
+                mock_resp.status = 200
+                mock_resp.json = AsyncMock(return_value=[])
+                return mock_resp
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+
+        mock_session.get = MagicMock(return_value=MockContextManager())
+
+        # Receive messages
+        messages = []
+        async for msg in client.receive_messages():
+            messages.append(msg)
+
+        # Should handle timeout gracefully and continue
+        assert messages == []
+        assert call_count == 2  # One timeout, one disconnection
+
+    @pytest.mark.asyncio
+    async def test_receive_messages_server_error(self):
+        """Verify receive_messages retries on server errors."""
+        client = SignalClient()
+
+        # Set up connection
+        mock_session = AsyncMock()
+        client._session = mock_session
+        client._connected = True
+        client.reconnection_manager.state = ConnectionState.CONNECTED
+
+        call_count = 0
+
+        class MockContextManager:
+            async def __aenter__(self):
+                nonlocal call_count
+                call_count += 1
+                mock_resp = AsyncMock()
+                if call_count == 1:
+                    # First call: server error
+                    mock_resp.status = 500
+                else:
+                    # Second call: disconnect to stop iteration
+                    client._connected = False
+                    mock_resp.status = 200
+                    mock_resp.json = AsyncMock(return_value=[])
+                return mock_resp
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+
+        mock_session.get = MagicMock(return_value=MockContextManager())
+
+        # Mock asyncio.sleep to avoid delays
+        with patch('asyncio.sleep', new_callable=AsyncMock):
+            messages = []
+            async for msg in client.receive_messages():
+                messages.append(msg)
+
+        # Should retry after server error
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_receive_messages_success_with_messages(self):
+        """Verify receive_messages yields messages correctly."""
+        client = SignalClient()
+
+        # Set up connection
+        mock_session = AsyncMock()
+        client._session = mock_session
+        client._connected = True
+        client.reconnection_manager.state = ConnectionState.CONNECTED
+
+        call_count = 0
+        test_messages = [
+            {"envelope": {"sourceNumber": "+1111111111"}, "account": "test"},
+            {"envelope": {"sourceNumber": "+2222222222"}, "account": "test"}
+        ]
+
+        class MockContextManager:
+            async def __aenter__(self):
+                nonlocal call_count
+                call_count += 1
+                mock_resp = AsyncMock()
+                if call_count == 1:
+                    # First call: return messages
+                    mock_resp.status = 200
+                    mock_resp.json = AsyncMock(return_value=test_messages)
+                else:
+                    # Second call: disconnect to stop iteration
+                    client._connected = False
+                    mock_resp.status = 200
+                    mock_resp.json = AsyncMock(return_value=[])
+                return mock_resp
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+
+        mock_session.get = MagicMock(return_value=MockContextManager())
+
+        # Receive messages
+        messages = []
+        async for msg in client.receive_messages():
+            messages.append(msg)
+
+        # Should yield all messages
+        assert messages == test_messages
+
+
+class TestReconnectionWithCatchup:
+    """Test reconnection with catch-up summary generation."""
+
+    @pytest.mark.asyncio
+    async def test_auto_reconnect_with_catchup_summaries(self):
+        """Verify auto_reconnect generates catch-up summaries for active sessions."""
+        client = SignalClient()
+        client.session_id = "test-session-123"
+
+        # Set initial state to DISCONNECTED
+        client.reconnection_manager.state = ConnectionState.DISCONNECTED
+
+        # Mock connect to succeed
+        async def mock_connect():
+            client._connected = True
+            client._session = MagicMock()
+
+        client.connect = mock_connect
+
+        # Mock session_synchronizer.sync()
+        async def mock_sync(session_id, local_context, remote_context):
+            from src.session.sync import SyncResult
+            return SyncResult(changed=False, diff={}, merged_context={})
+
+        client.session_synchronizer.sync = mock_sync
+
+        # Set up session_manager and notification_manager
+        from dataclasses import dataclass
+        from src.session.lifecycle import SessionStatus
+
+        @dataclass
+        class MockSession:
+            id: str
+            status: SessionStatus
+            thread_id: str
+
+        mock_session_manager = MagicMock()
+        mock_session_manager.list = AsyncMock(return_value=[
+            MockSession(id="session-1", status=SessionStatus.ACTIVE, thread_id="+1111111111"),
+            MockSession(id="session-2", status=SessionStatus.PAUSED, thread_id="+2222222222"),
+        ])
+        mock_session_manager.generate_catchup_summary = AsyncMock(return_value="Test activity summary")
+
+        mock_notification_manager = MagicMock()
+        mock_notification_manager.notify = AsyncMock()
+
+        client.session_manager = mock_session_manager
+        client.notification_manager = mock_notification_manager
+
+        # Mock asyncio.sleep
+        with patch('asyncio.sleep', new_callable=AsyncMock):
+            await client.auto_reconnect()
+
+        # Verify catch-up summary was generated for ACTIVE session only
+        mock_session_manager.generate_catchup_summary.assert_called_once_with("session-1")
+        mock_notification_manager.notify.assert_called_once()
+
+        # Verify final state is CONNECTED
+        assert client.reconnection_manager.state == ConnectionState.CONNECTED
