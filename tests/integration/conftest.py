@@ -197,31 +197,15 @@ async def approval_components() -> Dict[str, Any]:
     Returns dict with:
     - detector: OperationDetector
     - manager: ApprovalManager
-    - workflow: ApprovalWorkflow
 
     All configured for testing with mocked Signal notifications.
     """
     detector = OperationDetector()
     manager = ApprovalManager()
 
-    # Mock Signal notification function
-    async def mock_notify(thread_id: str, message: str):
-        """Mock notification that stores sent messages for verification."""
-        if not hasattr(mock_notify, "sent_messages"):
-            mock_notify.sent_messages = []
-        mock_notify.sent_messages.append({"thread_id": thread_id, "message": message})
-
-    workflow = ApprovalWorkflow(
-        detector=detector,
-        manager=manager,
-        notify_func=mock_notify,
-    )
-
     return {
         "detector": detector,
         "manager": manager,
-        "workflow": workflow,
-        "notify_func": mock_notify,
     }
 
 
@@ -237,19 +221,24 @@ async def orchestrator_components() -> Dict[str, Any]:
     Configured with mocked Signal send function.
     """
     parser = OutputParser()
+    responder = SignalResponder()
 
     # Mock Signal send function
-    async def mock_send(thread_id: str, message: str):
+    async def mock_send(recipient: str, message: str):
         """Mock send that stores sent messages for verification."""
         if not hasattr(mock_send, "sent_messages"):
             mock_send.sent_messages = []
-        mock_send.sent_messages.append({"thread_id": thread_id, "message": message})
-
-    responder = SignalResponder(send_func=mock_send)
+        mock_send.sent_messages.append({"recipient": recipient, "message": message})
+        # Return a Future to match expected signature
+        future = asyncio.Future()
+        future.set_result(None)
+        return future
 
     orchestrator = ClaudeOrchestrator(
+        bridge=None,  # Will be set by tests
         parser=parser,
         responder=responder,
+        send_signal=mock_send,
     )
 
     return {
