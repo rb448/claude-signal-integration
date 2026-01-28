@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 9 of 10 (Advanced Features & Emergency Mode)
-Plan: 2 of 5
+Plan: 3 of 5
 Status: In progress
-Last activity: 2026-01-28 — Completed 09-01-PLAN.md (Custom Command Sync)
+Last activity: 2026-01-28 — Completed 09-03-PLAN.md (Custom Command Interface)
 
-Progress: ████████████████░ 82% (8 phases + 2 plans complete, 1 phase + 3 plans remaining)
+Progress: ████████████████░ 83% (8 phases + 3 plans complete, 1 phase + 2 plans remaining)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 44
-- Average duration: 7.1 min
-- Total execution time: 5.58 hours (335 min)
+- Total plans completed: 45
+- Average duration: 7.0 min
+- Total execution time: 5.68 hours (341 min)
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: ████████████████░ 82% (8 phases + 2 
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
 | 8 - Notification System | 5/5 | 17min | 3.4min |
-| 9 - Advanced Features | 2/5 | 9min | 4.5min |
+| 9 - Advanced Features | 3/5 | 15min | 5.0min |
 
 **Recent Trend:**
-- Last 5 plans: 4min (08-04), 3min (08-05), 5min (09-01), 4min (09-02)
-- Trend: Phase 9 progressing - consistent TDD execution (both plans completed in 4-5min)
+- Last 5 plans: 3min (08-05), 5min (09-01), 4min (09-02), 6min (09-03)
+- Trend: Phase 9 progressing efficiently - TDD execution averaging 5min per plan
 
 ## Accumulated Context
 
@@ -228,6 +228,11 @@ Recent decisions affecting current work:
 | Auto-approval only for SAFE tools in emergency mode | 09-02 | Emergency mode streamlines workflow but maintains safety guardrails | Read operations fast, destructive operations still require approval |
 | Auto-commit uses asyncio.create_subprocess_exec | 09-02 | Prevents shell injection (Phase 2 pattern), safe subprocess execution | Secure git operations, no risk of command injection |
 | [EMERGENCY] prefix in auto-commit messages | 09-02 | Clear visual indicator of emergency mode commits in git history | Easy to identify emergency changes, supports audit trail |
+| CustomCommands follows ThreadCommands pattern | 09-03 | Consistent user experience across all /command handlers | Same async handle(thread_id, message) signature, same subcommand routing |
+| 30-char truncation for command names in list view | 09-03 | Mobile screens (320px) can't display long command names | List view truncated with "...", show view displays full name |
+| Session requirement for custom command invocation | 09-03 | Custom commands execute in Claude session context | Security boundary: users must start session before invoking commands |
+| execute_custom_command delegates to execute_command | 09-03 | Reuse existing streaming infrastructure instead of duplicating | Custom commands automatically get approval workflow, response streaming, error handling |
+| Slash command format: /{name} {args} | 09-03 | Claude Code recognizes slash commands as special commands | Custom commands sent as "/gsd:plan context" not "gsd:plan context" |
 
 ### Pending Todos
 
@@ -239,6 +244,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 16:28 UTC
-Stopped at: Completed 09-01-PLAN.md (Custom Command Sync)
+Last session: 2026-01-28 16:37 UTC
+Stopped at: Completed 09-03-PLAN.md (Custom Command Interface)
 Resume file: None
