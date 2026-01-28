@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 Phase: 9 of 10 (Advanced Features & Emergency Mode)
 Plan: 2 of 5
 Status: In progress
-Last activity: 2026-01-28 — Completed 09-02-PLAN.md (Emergency Mode Core)
+Last activity: 2026-01-28 — Completed 09-01-PLAN.md (Custom Command Sync)
 
 Progress: ████████████████░ 82% (8 phases + 2 plans complete, 1 phase + 3 plans remaining)
 
@@ -21,7 +21,7 @@ Progress: ████████████████░ 82% (8 phases + 2 
 **Velocity:**
 - Total plans completed: 44
 - Average duration: 7.1 min
-- Total execution time: 5.53 hours (329 min)
+- Total execution time: 5.58 hours (335 min)
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: ████████████████░ 82% (8 phases + 2 
 | 6 - Code Display & Mobile UX | 6/6 | 73min | 12.2min |
 | 7 - Connection Resilience | 5/5 | 108min | 21.6min |
 | 8 - Notification System | 5/5 | 17min | 3.4min |
-| 9 - Advanced Features | 2/5 | 4min | 2.0min |
+| 9 - Advanced Features | 2/5 | 9min | 4.5min |
 
 **Recent Trend:**
-- Last 5 plans: 3min (08-03), 4min (08-04), 3min (08-05), 0min (09-01), 4min (09-02)
-- Trend: Phase 9 started - fast TDD execution (09-02 completed in 4min)
+- Last 5 plans: 4min (08-04), 3min (08-05), 5min (09-01), 4min (09-02)
+- Trend: Phase 9 progressing - consistent TDD execution (both plans completed in 4-5min)
 
 ## Accumulated Context
 
@@ -216,6 +216,12 @@ Recent decisions affecting current work:
 | Skip catch-up notification if no meaningful activity | 08-05 | Check for "No activity" in summary before calling notify() | Avoids noise when nothing happened during disconnect |
 | session_manager and notification_manager wired into SignalClient dynamically | 08-05 | Daemon sets attributes after component initialization using hasattr checks | Maintains decoupled architecture, SignalClient doesn't have direct dependencies |
 | Plain-English activity summary format with operation counts | 08-05 | Activity type-specific formatting (tool_call, command_executed) with "Ready to continue" message | Mobile-friendly readability consistent with notification patterns |
+| SQLite with WAL mode for custom_commands.db | 09-01 | Concurrent access needed for registry queries during file monitoring | Follows Phase 2 SessionManager pattern, safe concurrent reads during writes |
+| JSON metadata storage for command registry | 09-01 | Command metadata structure will evolve with features | Flexible storage without schema migrations, Phase 2 context pattern |
+| asyncio.run_coroutine_threadsafe for watchdog integration | 09-01 | Watchdog observer runs in separate thread, can't use asyncio.create_task | Thread-safe async scheduling from sync file system event handlers |
+| Event loop passed to CommandSyncer.start() | 09-01 | Test compatibility and explicit async context | Tests provide running loop, production gets current running loop |
+| Filename stem for command deletion detection | 09-01 | Deleted file content unavailable for parsing | Assumes convention: filename matches command name field in frontmatter |
+| Idempotent add_command for create and modify events | 09-01 | Simplifies syncer logic with single method for both operations | SQLite UPSERT via ON CONFLICT DO UPDATE handles both cases |
 | EmergencyStatus as IntEnum with NORMAL=0, EMERGENCY=1 | 09-02 | Integer storage in SQLite, follows Phase 2/7 patterns | Efficient database queries, clear boolean semantics via is_active() |
 | Single-row state storage with CHECK constraint (id=1) for emergency mode | 09-02 | Emergency mode is global singleton state, not per-session | Simple queries without WHERE clauses, enforced at database level |
 | Idempotent emergency mode activate/deactivate | 09-02 | Safe retry logic, prevents race conditions | Activating when EMERGENCY is no-op, original thread preserved |
@@ -233,6 +239,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 16:27 UTC
-Stopped at: Completed 09-02-PLAN.md (Emergency Mode Core)
+Last session: 2026-01-28 16:28 UTC
+Stopped at: Completed 09-01-PLAN.md (Custom Command Sync)
 Resume file: None
