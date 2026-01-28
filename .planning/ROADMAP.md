@@ -321,10 +321,15 @@ Plans:
     9. Write failing tests for priority rules (urgent overrides user prefs, etc.)
     10. Implement priority logic to pass tests
 **Research**: Unlikely (mobile notification best practices established)
-**Plans**: TBD
+**Plans**: 5 plans
+**Completed**: 2026-01-28
 
 Plans:
-- [ ] 08-01: TBD during phase planning
+- [x] 08-01: Event Categorization & Formatting
+- [x] 08-02: Notification Preferences
+- [x] 08-03: Notification Command Interface
+- [x] 08-04: Orchestrator & Daemon Integration
+- [x] 08-05: Catch-Up Summary Generation
 
 ### Phase 9: Advanced Features & Emergency Mode
 **Goal**: Custom commands and streamlined emergency workflows
@@ -422,8 +427,8 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 | 3. Claude Integration | 5/5 | Complete | 2026-01-26 |
 | 4. Multi-Project | 5/5 | Complete | 2026-01-26 |
 | 5. Permissions | 5/5 | Complete | 2026-01-26 |
-| 6. Code Display | 0/TBD | Not started | - |
-| 7. Connection Resilience | 0/TBD | Not started | - |
-| 8. Notifications | 0/TBD | Not started | - |
+| 6. Code Display | 6/6 | Complete | 2026-01-26 |
+| 7. Connection Resilience | 5/5 | Complete | 2026-01-28 |
+| 8. Notifications | 5/5 | Complete | 2026-01-28 |
 | 9. Advanced Features | 0/TBD | Not started | - |
 | 10. Testing & Quality | 0/TBD | Not started | - |

@@ -53,27 +53,27 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Code Display System
 
-- [ ] **CODE-01**: System displays code snippets (<20 lines) inline with monospace formatting
-- [ ] **CODE-02**: System sends long code (>100 lines) as file attachments
-- [ ] **CODE-03**: System applies syntax highlighting optimized for mobile screens (320px)
-- [ ] **CODE-04**: System renders diffs with side-by-side or overlay mode
-- [ ] **CODE-05**: System provides plain-English summaries of code changes
-- [ ] **CODE-06**: User can request full code view when summary is insufficient
+- [x] **CODE-01**: System displays code snippets (<20 lines) inline with monospace formatting
+- [x] **CODE-02**: System sends long code (>100 lines) as file attachments
+- [x] **CODE-03**: System applies syntax highlighting optimized for mobile screens (320px)
+- [x] **CODE-04**: System renders diffs with side-by-side or overlay mode
+- [x] **CODE-05**: System provides plain-English summaries of code changes
+- [x] **CODE-06**: User can request full code view when summary is insufficient
 
 ### Connection Resilience
 
-- [ ] **CONN-01**: System automatically reconnects WebSocket after network drop with exponential backoff
-- [ ] **CONN-02**: System buffers outgoing messages during disconnect and sends on reconnect
-- [ ] **CONN-03**: System synchronizes session state after reconnection
-- [ ] **CONN-04**: System displays connection status indicators (connected/reconnecting/offline/syncing)
-- [ ] **CONN-05**: Claude continues working during mobile disconnect, user catches up on reconnect
+- [x] **CONN-01**: System automatically reconnects WebSocket after network drop with exponential backoff
+- [x] **CONN-02**: System buffers outgoing messages during disconnect and sends on reconnect
+- [x] **CONN-03**: System synchronizes session state after reconnection
+- [x] **CONN-04**: System displays connection status indicators (connected/reconnecting/offline/syncing)
+- [x] **CONN-05**: Claude continues working during mobile disconnect, user catches up on reconnect
 
 ### Notification System
 
-- [ ] **NOTF-01**: System sends push notifications for critical events (errors, approval needed)
-- [ ] **NOTF-02**: User can configure notification preferences per project thread
-- [ ] **NOTF-03**: System categorizes notifications by urgency tier (urgent/important/informational/silent)
-- [ ] **NOTF-04**: User can enable/disable notifications per event type (errors vs progress vs completions)
+- [x] **NOTF-01**: System sends push notifications for critical events (errors, approval needed)
+- [x] **NOTF-02**: User can configure notification preferences per project thread
+- [x] **NOTF-03**: System categorizes notifications by urgency tier (urgent/important/informational/silent)
+- [x] **NOTF-04**: User can enable/disable notifications per event type (errors vs progress vs completions)
 
 ### Advanced Features
 
@@ -175,21 +175,21 @@ Which phases cover which requirements. Updated by create-roadmap.
 | PERM-05 | Phase 5 | Complete |
 | PERM-06 | Phase 5 | Complete |
 | PERM-07 | Phase 5 | Complete |
-| CODE-01 | Phase 6 | Pending |
-| CODE-02 | Phase 6 | Pending |
-| CODE-03 | Phase 6 | Pending |
-| CODE-04 | Phase 6 | Pending |
-| CODE-05 | Phase 6 | Pending |
-| CODE-06 | Phase 6 | Pending |
-| CONN-01 | Phase 7 | Pending |
-| CONN-02 | Phase 7 | Pending |
-| CONN-03 | Phase 7 | Pending |
-| CONN-04 | Phase 7 | Pending |
-| CONN-05 | Phase 7 | Pending |
-| NOTF-01 | Phase 8 | Pending |
-| NOTF-02 | Phase 8 | Pending |
-| NOTF-03 | Phase 8 | Pending |
-| NOTF-04 | Phase 8 | Pending |
+| CODE-01 | Phase 6 | Complete |
+| CODE-02 | Phase 6 | Complete |
+| CODE-03 | Phase 6 | Complete |
+| CODE-04 | Phase 6 | Complete |
+| CODE-05 | Phase 6 | Complete |
+| CODE-06 | Phase 6 | Complete |
+| CONN-01 | Phase 7 | Complete |
+| CONN-02 | Phase 7 | Complete |
+| CONN-03 | Phase 7 | Complete |
+| CONN-04 | Phase 7 | Complete |
+| CONN-05 | Phase 7 | Complete |
+| NOTF-01 | Phase 8 | Complete |
+| NOTF-02 | Phase 8 | Complete |
+| NOTF-03 | Phase 8 | Complete |
+| NOTF-04 | Phase 8 | Complete |
 | ADV-01 | Phase 9 | Pending |
 | ADV-02 | Phase 9 | Pending |
 | ADV-03 | Phase 9 | Pending |
