@@ -23,6 +23,23 @@ class ClaudeOrchestrator:
     - Batching and sending messages back to Signal
     """
 
+    # TODO (Phase 8): Catch-up summary generation after reconnection
+    #
+    # After mobile reconnects, generate summary of Claude activity during disconnect:
+    # 1. Fetch session.context["activity_log"] from SessionManager
+    # 2. Generate plain-English summary: "While you were offline, I completed..."
+    # 3. Send summary message before draining buffered responses
+    #
+    # Example summary:
+    #   "📱 Back online! While you were disconnected, I:
+    #    - Analyzed the authentication module (3 issues found)
+    #    - Ran 24 tests (all passed)
+    #    - Created 2 new files
+    #
+    #    Sending full results now..."
+    #
+    # This satisfies CONN-05's "user catches up on reconnect" requirement.
+
     # Batch interval for message sending (seconds)
     BATCH_INTERVAL = 0.5
 
