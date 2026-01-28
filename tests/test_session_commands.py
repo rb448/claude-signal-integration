@@ -914,3 +914,117 @@ async def test_code_command_unknown_subcommand():
     # Should return error with help reference
     assert "Unknown subcommand" in result or "invalid" in result
     assert "/code help" in result
+
+
+@pytest.mark.asyncio
+async def test_notification_commands_take_priority_over_thread_commands():
+    """Test that notification commands take priority over thread commands."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    # Create NotificationCommands
+    from src.notification.preferences import NotificationPreferences
+    from src.notification.commands import NotificationCommands
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prefs = NotificationPreferences(db_path=f"{tmpdir}/test_prefs.db")
+        await prefs.initialize()
+        notification_commands = NotificationCommands(prefs)
+
+        # Create SessionCommands with notification_commands
+        commands = SessionCommands(
+            manager,
+            lifecycle,
+            process_factory,
+            notification_commands=notification_commands
+        )
+
+        # Execute notification command
+        response = await commands.handle("thread-123", "/notify help")
+
+        # Should route to notification commands
+        assert "Notification Commands:" in response
+        assert "/notify list" in response
+        assert "/notify enable" in response
+        assert "/notify disable" in response
+
+        await prefs.close()
+
+
+@pytest.mark.asyncio
+async def test_notification_commands_fall_through_to_session():
+    """Test that notification commands return None for unknown commands, allowing fallthrough."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    # Create NotificationCommands
+    from src.notification.preferences import NotificationPreferences
+    from src.notification.commands import NotificationCommands
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prefs = NotificationPreferences(db_path=f"{tmpdir}/test_prefs.db")
+        await prefs.initialize()
+        notification_commands = NotificationCommands(prefs)
+
+        # Create SessionCommands with notification_commands
+        commands = SessionCommands(
+            manager,
+            lifecycle,
+            process_factory,
+            notification_commands=notification_commands
+        )
+
+        # Mock session list
+        manager.list.return_value = []
+
+        # Execute session command (should fall through notification commands)
+        response = await commands.handle("thread-123", "/session list")
+
+        # Should route to session commands
+        assert "No sessions found" in response
+
+        await prefs.close()
+
+
+@pytest.mark.asyncio
+async def test_help_includes_notification_commands_when_available():
+    """Test that help message includes notification commands when available."""
+    # Setup mocks
+    manager = AsyncMock(spec=SessionManager)
+    lifecycle = AsyncMock(spec=SessionLifecycle)
+    process_factory = MagicMock()
+
+    # Create NotificationCommands
+    from src.notification.preferences import NotificationPreferences
+    from src.notification.commands import NotificationCommands
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prefs = NotificationPreferences(db_path=f"{tmpdir}/test_prefs.db")
+        await prefs.initialize()
+        notification_commands = NotificationCommands(prefs)
+
+        # Create SessionCommands with notification_commands
+        commands = SessionCommands(
+            manager,
+            lifecycle,
+            process_factory,
+            notification_commands=notification_commands
+        )
+
+        # Get help
+        help_text = commands._help()
+
+        # Should include notification commands
+        assert "Notification Commands:" in help_text
+        assert "/notify list" in help_text
+        assert "/notify enable" in help_text
+        assert "/notify disable" in help_text
+
+        await prefs.close()

@@ -11,6 +11,7 @@ from src.claude import ClaudeProcess
 from src.claude.orchestrator import ClaudeOrchestrator
 from src.thread import ThreadCommands, ThreadMapper
 from src.approval.commands import ApprovalCommands
+from src.notification.commands import NotificationCommands
 
 
 class SessionCommands:
@@ -31,6 +32,7 @@ class SessionCommands:
         thread_commands: Optional[ThreadCommands] = None,
         thread_mapper: Optional[ThreadMapper] = None,
         approval_commands: Optional[ApprovalCommands] = None,
+        notification_commands: Optional[NotificationCommands] = None,
     ):
         """
         Initialize SessionCommands.
@@ -43,6 +45,7 @@ class SessionCommands:
             thread_commands: ThreadCommands for thread mapping operations
             thread_mapper: ThreadMapper for thread-to-project mapping lookups
             approval_commands: ApprovalCommands for approval/rejection operations
+            notification_commands: NotificationCommands for notification preference operations
         """
         self.manager = session_manager
         self.lifecycle = session_lifecycle
@@ -51,12 +54,13 @@ class SessionCommands:
         self.thread_commands = thread_commands
         self.thread_mapper = thread_mapper
         self.approval_commands = approval_commands
+        self.notification_commands = notification_commands
         self.processes: dict[str, ClaudeProcess] = {}  # session_id -> process
         self.thread_sessions: dict[str, str] = {}  # thread_id -> session_id (active sessions)
 
     async def handle(self, thread_id: str, message: str) -> str:
         """
-        Handle /session command, /thread command, /code command, approval command, or Claude command.
+        Handle /session command, /thread command, /code command, approval command, notification command, or Claude command.
 
         Args:
             thread_id: Signal thread ID for this command
@@ -65,24 +69,36 @@ class SessionCommands:
         Returns:
             Response message to send back to user (None for Claude commands)
         """
-        # Route to appropriate handler (approval commands take priority)
+        # Route to appropriate handler in priority order:
+        # 1. Approval commands (most urgent - time-sensitive operations)
         if self.approval_commands:
             result = await self.approval_commands.handle(message)
             if result is not None:
                 return result
 
+        # 2. Notification commands (user configuration)
+        if self.notification_commands:
+            result = await self.notification_commands.handle(message, thread_id)
+            if result is not None:
+                return result
+
+        # 3. Thread commands (project management)
         if message.strip().startswith("/thread"):
-            # Delegate to ThreadCommands
             if self.thread_commands:
                 return await self.thread_commands.handle(thread_id, message)
             else:
                 return "Thread management not available."
-        elif message.strip().startswith("/code"):
+
+        # 4. Code display commands
+        if message.strip().startswith("/code"):
             return await self._handle_code_command(message, thread_id)
-        elif message.strip().startswith("/session"):
+
+        # 5. Session commands (session lifecycle)
+        if message.strip().startswith("/session"):
             return await self._handle_session_command(thread_id, message)
-        else:
-            return await self._handle_claude_command(thread_id, message)
+
+        # 6. Claude commands (everything else)
+        return await self._handle_claude_command(thread_id, message)
 
     async def _handle_session_command(self, thread_id: str, message: str) -> str:
         """
@@ -382,6 +398,10 @@ class SessionCommands:
         # Add approval commands if available
         if self.approval_commands:
             help_text += self.approval_commands.help() + "\n\n"
+
+        # Add notification commands if available
+        if self.notification_commands:
+            help_text += self.notification_commands.help() + "\n\n"
 
         # Add thread commands reference (they have /thread help)
         if self.thread_commands:
