@@ -26,6 +26,13 @@ from ..notification.categorizer import EventCategorizer
 from ..notification.preferences import NotificationPreferences
 from ..notification.manager import NotificationManager
 from ..notification.commands import NotificationCommands
+from ..custom_commands.registry import CustomCommandRegistry
+from ..custom_commands.syncer import CommandSyncer
+from ..custom_commands.commands import CustomCommands
+from ..emergency.mode import EmergencyMode
+from ..emergency.auto_approver import EmergencyAutoApprover
+from ..emergency.auto_committer import EmergencyAutoCommitter
+from ..emergency.commands import EmergencyCommands
 
 logger = structlog.get_logger(__name__)
 
@@ -77,6 +84,21 @@ class ServiceDaemon:
             str(data_dir / "notification_prefs.db")
         )
         # notification_manager will be created in run() after signal_client is ready
+
+        # Custom commands (Phase 9)
+        self.custom_command_registry = CustomCommandRegistry(
+            data_dir / "custom_commands.db"
+        )
+        self.command_syncer = CommandSyncer(
+            registry=self.custom_command_registry
+        )
+
+        # Emergency mode (Phase 9)
+        self.emergency_mode = EmergencyMode(
+            str(data_dir / "emergency_mode.db")
+        )
+        self.emergency_auto_approver = EmergencyAutoApprover()
+        self.emergency_auto_committer = EmergencyAutoCommitter()
 
         # Approval system
         self.approval_detector = OperationDetector()
@@ -245,6 +267,31 @@ class ServiceDaemon:
                 pending_approvals=len(self.approval_manager.list_pending())
             )
 
+            # Initialize custom command registry
+            await self.custom_command_registry.initialize()
+
+            # Run initial scan to load existing commands
+            await self.command_syncer.initial_scan()
+
+            # Start file system watcher
+            self.command_syncer.start()
+
+            # Log custom command status
+            commands = await self.custom_command_registry.list_commands()
+            logger.info(
+                "custom_commands_synced",
+                command_count=len(commands),
+                agents_dir=str(self.command_syncer.agents_dir)
+            )
+
+            # Initialize emergency mode
+            await self.emergency_mode.initialize()
+
+            # Log emergency mode status
+            is_active = await self.emergency_mode.is_active()
+            status = "EMERGENCY" if is_active else "NORMAL"
+            logger.info("emergency_mode_initialized", status=status)
+
             # Initialize notification preferences database
             await self.notification_prefs.initialize()
             logger.info("notification_system_initialized")
@@ -257,6 +304,10 @@ class ServiceDaemon:
                 authorized_number=self.phone_verifier.authorized_number
             )
 
+            # Wire emergency components into approval workflow
+            self.approval_workflow.emergency_auto_approver = self.emergency_auto_approver
+            self.approval_workflow.emergency_mode = self.emergency_mode
+
             # Wire notification manager into components
             self.claude_orchestrator.notification_manager = self.notification_manager
             self.approval_workflow.notification_manager = self.notification_manager
@@ -266,6 +317,17 @@ class ServiceDaemon:
             # Wire notification commands
             notification_commands = NotificationCommands(self.notification_prefs)
             self.session_commands.notification_commands = notification_commands
+
+            # Wire custom commands
+            custom_commands = CustomCommands(
+                registry=self.custom_command_registry,
+                orchestrator=self.claude_orchestrator
+            )
+            self.session_commands.custom_commands = custom_commands
+
+            # Wire emergency commands
+            emergency_commands = EmergencyCommands(emergency_mode=self.emergency_mode)
+            self.session_commands.emergency_commands = emergency_commands
 
             # Log notification system readiness
             logger.info(
@@ -380,6 +442,9 @@ class ServiceDaemon:
 
             # Stop health check endpoint
             await self._stop_health_server()
+
+            # Stop command syncer
+            self.command_syncer.stop()
 
             # Close session manager database connection
             await self.session_manager.close()
