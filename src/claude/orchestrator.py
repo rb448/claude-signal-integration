@@ -210,10 +210,10 @@ class ClaudeOrchestrator:
         Args:
             message: Message text to send
         """
-        if self.session_id:
+        if self.current_thread_id:
             # send_signal expects (recipient, message)
-            # For now, we'll use session_id as recipient (daemon will map to thread)
-            await self.send_signal(self.session_id, message)
+            # Use thread_id (phone number) for routing, not session_id (UUID)
+            await self.send_signal(self.current_thread_id, message)
 
     def approve_operation(self, request_id: str) -> None:
         """
