@@ -71,6 +71,27 @@ def test_includes_operation_summary(auto_committer):
     assert "file2.py" in message
 
 
+def test_format_commit_message_many_files(auto_committer):
+    """Test commit message truncates file list for 4+ files."""
+    message = auto_committer.format_commit_message(
+        session_id="test-session-123",
+        operation="Edit",
+        files=["file1.py", "file2.py", "file3.py", "file4.py", "file5.py"],
+    )
+
+    # First 3 files listed
+    assert "file1.py" in message
+    assert "file2.py" in message
+    assert "file3.py" in message
+
+    # Remaining files indicated with count
+    assert "and 2 more" in message
+
+    # Not all files individually listed
+    assert "file4.py" not in message
+    assert "file5.py" not in message
+
+
 @pytest.mark.asyncio
 async def test_commit_after_successful_edit(auto_committer, emergency_mode):
     """Test auto-commit after successful Edit operation."""
