@@ -236,3 +236,37 @@ async def test_auto_commit_git_add_failure(auto_committer, emergency_mode):
         mock_exec.assert_called_once()
         assert "git" in mock_exec.call_args[0]
         assert "add" in mock_exec.call_args[0]
+
+
+@pytest.mark.asyncio
+async def test_auto_commit_git_commit_failure(auto_committer, emergency_mode):
+    """Test auto-commit when git commit fails."""
+    await emergency_mode.activate("thread-123")
+
+    with (
+        patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_exec,
+        tempfile.TemporaryDirectory() as tmpdir,
+    ):
+        # Mock git add success, git commit failure
+        add_process = AsyncMock()
+        add_process.communicate = AsyncMock(return_value=(b"", b""))
+        add_process.returncode = 0
+
+        commit_process = AsyncMock()
+        commit_process.communicate = AsyncMock(
+            return_value=(b"", b"nothing to commit, working tree clean")
+        )
+        commit_process.returncode = 1
+
+        mock_exec.side_effect = [add_process, commit_process]
+
+        await auto_committer.auto_commit(
+            emergency_mode=emergency_mode,
+            session_id="test-session",
+            project_path=tmpdir,
+            operation="Edit",
+            files=["test.py"],
+        )
+
+        # Should call git add and git commit
+        assert mock_exec.call_count == 2
