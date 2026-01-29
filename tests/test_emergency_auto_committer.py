@@ -270,3 +270,28 @@ async def test_auto_commit_git_commit_failure(auto_committer, emergency_mode):
 
         # Should call git add and git commit
         assert mock_exec.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_auto_commit_subprocess_exception(auto_committer, emergency_mode):
+    """Test auto-commit handles subprocess exceptions gracefully."""
+    await emergency_mode.activate("thread-123")
+
+    with (
+        patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_exec,
+        tempfile.TemporaryDirectory() as tmpdir,
+    ):
+        # Mock subprocess to raise exception
+        mock_exec.side_effect = OSError("git not found")
+
+        # Should not crash
+        await auto_committer.auto_commit(
+            emergency_mode=emergency_mode,
+            session_id="test-session",
+            project_path=tmpdir,
+            operation="Edit",
+            files=["test.py"],
+        )
+
+        # Exception was handled (no crash)
+        assert True
