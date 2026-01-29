@@ -38,6 +38,7 @@ Each phase includes a **TDD Strategy** section specifying:
 - [x] **Phase 10: Testing & Quality** - Comprehensive test suite and CI/CD
 - [x] **Phase 11: Claude Integration Wiring Fixes** - Restore primary user flow (gap closure)
 - [x] **Phase 12: Test Coverage Improvement** - Unit tests for critical modules (quality enhancement)
+- [ ] **Phase 13: Edge Case Coverage** - Edge case testing for 80-89% modules (optional quality boost)
 
 ## Phase Details
 
@@ -490,6 +491,37 @@ Plans:
 Plans:
 - [x] 12-01: Unit Test Coverage for Critical Modules
 
+### Phase 13: Edge Case Coverage
+**Goal**: Improve edge case coverage for modules at 80-89% to reach 95%
+**Depends on**: Phase 12 (builds on coverage improvement pattern)
+**Requirements**: Quality enhancement (further improves TEST-01)
+**Success Criteria** (what must be TRUE):
+  1. emergency/auto_committer.py coverage ≥95% (from 82%)
+  2. Git error paths fully tested (add failure, commit failure)
+  3. Exception handling during subprocess execution covered
+  4. File list truncation edge case (4+ files) covered
+**TDD Strategy**: Test-first for uncovered error paths
+  - **TDD (write tests FIRST):**
+    - Unit test for git add failure (returncode != 0)
+    - Unit test for git commit failure with stderr
+    - Unit test for subprocess exception handling
+    - Unit test for file list truncation (4+ files)
+  - **Verification (after tests pass):**
+    - Run coverage report to verify ≥95%
+    - Run full test suite to ensure no regressions
+  - **Test-first execution order:**
+    1. Analyze coverage report to identify uncovered lines
+    2. Write unit test for git add failure path
+    3. Write unit test for git commit failure path
+    4. Write unit test for exception handling
+    5. Write unit test for file truncation edge case
+    6. Run coverage report to confirm 95%+ achievement
+**Research**: Not needed (testing existing error handling)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 13-01: Edge Case Coverage for Auto-Committer
+
 ## Progress
 
 **Execution Order:**
@@ -509,3 +541,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 | 10. Testing & Quality | 5/5 | Complete | 2026-01-28 |
 | 11. Wiring Fixes | 1/1 | Complete | 2026-01-28 |
 | 12. Test Coverage | 1/1 | Complete | 2026-01-29 |
+| 13. Edge Case Coverage | 0/1 | Pending | - |
