@@ -204,3 +204,35 @@ async def test_multiple_files_added(auto_committer, emergency_mode):
         first_call = mock_exec.call_args_list[0]
         for file in files:
             assert file in first_call[0]
+
+
+@pytest.mark.asyncio
+async def test_auto_commit_git_add_failure(auto_committer, emergency_mode):
+    """Test auto-commit when git add fails."""
+    await emergency_mode.activate("thread-123")
+
+    with (
+        patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_exec,
+        tempfile.TemporaryDirectory() as tmpdir,
+    ):
+        # Mock git add failure
+        mock_process = AsyncMock()
+        mock_process.communicate = AsyncMock(return_value=(b"", b"error"))
+        mock_process.returncode = 1  # Non-zero = failure
+        mock_exec.return_value = mock_process
+
+        await auto_committer.auto_commit(
+            emergency_mode=emergency_mode,
+            session_id="test-session",
+            project_path=tmpdir,
+            operation="Edit",
+            files=["test.py"],
+        )
+
+        # Should only call git add (no commit)
+        assert mock_exec.call_count == 1
+
+        # Verify git add was called
+        mock_exec.assert_called_once()
+        assert "git" in mock_exec.call_args[0]
+        assert "add" in mock_exec.call_args[0]
