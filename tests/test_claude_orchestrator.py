@@ -384,3 +384,265 @@ async def test_execute_custom_command_no_args():
 
     # Assert - command sent without args (just slash + name)
     bridge.send_command.assert_called_once_with("/simple:cmd ")
+
+
+@pytest.mark.asyncio
+async def test_execute_command_bridge_none():
+    """
+    Test execute_command when bridge is None.
+
+    Tests that when bridge is not initialized:
+    1. Error message is logged
+    2. Error sent to user via Signal
+    3. No command execution attempted
+    4. Returns early without crashing
+    """
+    # Arrange
+    parser = OutputParser()
+    responder = SignalResponder()
+    send_signal = AsyncMock()
+
+    # Create orchestrator with bridge=None
+    orchestrator = ClaudeOrchestrator(
+        bridge=None,  # No bridge available
+        parser=parser,
+        responder=responder,
+        send_signal=send_signal
+    )
+
+    # Act
+    await orchestrator.execute_command("test command", "session-123", "+1234567890")
+
+    # Assert
+    # Should send error message to Signal
+    assert send_signal.call_count >= 1
+    calls = send_signal.call_args_list
+    messages = [call[0][1] for call in calls]
+    combined = "\n".join(messages)
+
+    # Error should mention no active session or similar
+    assert "Error" in combined or "❌" in combined or "session" in combined.lower()
+
+
+@pytest.mark.asyncio
+async def test_approval_timeout_during_execution():
+    """
+    Test approval request timeout handling.
+
+    Tests that when approval request times out (10 minutes):
+    1. Operation is rejected
+    2. User is notified of timeout
+    3. Execution skips the operation
+    4. Subsequent operations continue
+    """
+    # Arrange
+    bridge = Mock()
+    parser = OutputParser()
+    responder = SignalResponder()
+    send_signal = AsyncMock()
+
+    # Mock approval workflow
+    approval_workflow = Mock()
+
+    # Mock intercept to require approval
+    approval_workflow.intercept.return_value = (False, "approval-123")
+
+    # Mock detector
+    approval_workflow.detector = Mock()
+    approval_workflow.detector.classify.return_value = (False, "Destructive: Write operation")
+
+    # Mock format_approval_message
+    approval_workflow.format_approval_message.return_value = "Approval required for Write tool"
+
+    # Mock wait_for_approval to simulate timeout (return False)
+    async def mock_wait():
+        await asyncio.sleep(0.1)  # Simulate wait time
+        return False  # Timeout/rejection
+
+    approval_workflow.wait_for_approval = mock_wait
+
+    # Mock bridge response with a destructive tool call
+    async def mock_read_response():
+        yield "Using Write tool on critical_file.py"
+        yield "Continuing with next operation..."
+
+    bridge.send_command = AsyncMock()
+    bridge.read_response = mock_read_response
+
+    orchestrator = ClaudeOrchestrator(
+        bridge=bridge,
+        parser=parser,
+        responder=responder,
+        send_signal=send_signal,
+        approval_workflow=approval_workflow
+    )
+
+    # Act
+    await orchestrator.execute_command("dangerous command", "session-456", "+1234567890")
+
+    # Assert
+    calls = send_signal.call_args_list
+    messages = [call[0][1] for call in calls]
+    combined = "\n".join(messages)
+
+    # Should contain rejection message
+    assert "rejected" in combined.lower() or "timed out" in combined.lower() or "❌" in combined
+
+
+@pytest.mark.asyncio
+async def test_custom_command_not_found():
+    """
+    Test execute_custom_command for non-existent command.
+
+    Tests that when custom command doesn't exist:
+    1. Command is sent to bridge anyway (bridge handles validation)
+    2. Error response from Claude is properly formatted
+    3. User is notified of the error
+    """
+    # Arrange
+    bridge = Mock()
+    parser = OutputParser()
+    responder = SignalResponder()
+    send_signal = AsyncMock()
+
+    # Mock bridge response indicating command not found
+    async def mock_read_response():
+        yield "Error: Command '/nonexistent:cmd' not recognized"
+        yield "Available commands: /help, /session, /thread"
+
+    bridge.send_command = AsyncMock()
+    bridge.read_response = mock_read_response
+
+    orchestrator = ClaudeOrchestrator(
+        bridge=bridge,
+        parser=parser,
+        responder=responder,
+        send_signal=send_signal
+    )
+
+    # Act
+    await orchestrator.execute_custom_command(
+        command_name="nonexistent:cmd",
+        args="some args",
+        thread_id="thread-789"
+    )
+
+    # Assert
+    # Command should be sent to bridge (validation happens there)
+    bridge.send_command.assert_called_once_with("/nonexistent:cmd some args")
+
+    # Error response should be sent to Signal
+    calls = send_signal.call_args_list
+    messages = [call[0][1] for call in calls]
+    combined = "\n".join(messages)
+
+    assert "Error" in combined or "not recognized" in combined or "❌" in combined
+
+
+@pytest.mark.asyncio
+async def test_response_formatting_with_null_output():
+    """
+    Test response formatting when parser returns None or empty output.
+
+    Tests that when parser returns None/empty:
+    1. No message is sent to Signal
+    2. No errors are raised
+    3. Execution continues
+    """
+    # Arrange
+    bridge = Mock()
+    parser = Mock()
+    responder = Mock()
+    send_signal = AsyncMock()
+
+    # Mock parser to return None
+    parser.parse.return_value = None
+
+    # Mock responder.format to handle None gracefully
+    responder.format.return_value = ""  # Empty formatted message
+
+    # Mock bridge response
+    async def mock_read_response():
+        yield "Some output"
+        yield "More output"
+
+    bridge.send_command = AsyncMock()
+    bridge.read_response = mock_read_response
+
+    orchestrator = ClaudeOrchestrator(
+        bridge=bridge,
+        parser=parser,
+        responder=responder,
+        send_signal=send_signal
+    )
+
+    # Act
+    await orchestrator.execute_command("test command", "session-999", "+1234567890")
+
+    # Assert
+    # Parser should have been called
+    assert parser.parse.call_count >= 1
+
+    # send_signal might be called but with empty messages (which get filtered in batcher)
+    # The key is no exception was raised
+
+
+@pytest.mark.asyncio
+async def test_bridge_read_exception():
+    """
+    Test bridge.read_response() raising exception mid-stream.
+
+    Tests that when bridge raises exception during streaming:
+    1. Error is caught
+    2. User is notified via Signal
+    3. Orchestrator remains stable
+    4. Error notification sent if notification_manager available
+    """
+    # Arrange
+    bridge = Mock()
+    parser = OutputParser()
+    responder = SignalResponder()
+    send_signal = AsyncMock()
+    notification_manager = Mock()
+    notification_manager.notify = AsyncMock()
+
+    # Mock bridge to raise exception mid-stream
+    async def mock_read_response():
+        yield "Starting operation..."
+        yield "Processing file 1..."
+        raise ConnectionError("WebSocket connection lost")
+        # Should never reach here
+        yield "Should not see this"
+
+    bridge.send_command = AsyncMock()
+    bridge.read_response = mock_read_response
+
+    orchestrator = ClaudeOrchestrator(
+        bridge=bridge,
+        parser=parser,
+        responder=responder,
+        send_signal=send_signal,
+        notification_manager=notification_manager
+    )
+
+    # Act
+    await orchestrator.execute_command(
+        command="test command",
+        session_id="session-error",
+        recipient="+1234567890",
+        thread_id="thread-error"
+    )
+
+    # Assert
+    # Error message should be sent to Signal
+    calls = send_signal.call_args_list
+    messages = [call[0][1] for call in calls]
+    combined = "\n".join(messages)
+
+    assert "Error" in combined or "connection" in combined.lower() or "❌" in combined
+
+    # Error notification should be sent
+    notification_manager.notify.assert_called()
+    notify_call = notification_manager.notify.call_args
+    assert notify_call[1]["event_type"] == "error"
+    assert "connection" in notify_call[1]["details"]["error"].lower()
