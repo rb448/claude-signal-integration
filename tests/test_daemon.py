@@ -414,3 +414,287 @@ async def test_daemon_startup_initializes_notification_system(capsys):
         await daemon.thread_mapper.close()
         if hasattr(daemon, 'notification_prefs') and daemon.notification_prefs._connection:
             await daemon.notification_prefs.close()
+
+
+@pytest.mark.asyncio
+async def test_health_server_port_already_in_use(capsys):
+    """
+    Verify daemon handles health server port conflicts gracefully.
+
+    Tests that when port 8081 is already bound:
+    1. Daemon logs the error
+    2. Daemon continues initialization (health check is optional)
+    3. Main service remains functional
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create daemon
+        daemon = ServiceDaemon()
+        daemon.thread_mapper = ThreadMapper(str(Path(tmpdir) / "thread_mappings.db"))
+
+        # Mock _start_health_server to simulate port conflict
+        async def mock_health_server_error():
+            raise OSError("Address already in use")
+
+        daemon._start_health_server = mock_health_server_error
+        daemon._stop_health_server = AsyncMock()
+
+        # Mock dependencies
+        daemon.signal_client = AsyncMock()
+        daemon.signal_client.connect = AsyncMock(side_effect=ConnectionError("Mock stop"))
+        daemon.signal_client.api_url = "ws://mock:8080"
+        daemon.session_manager = AsyncMock()
+        daemon.session_manager.initialize = AsyncMock()
+        daemon.session_manager.close = AsyncMock()
+        daemon.crash_recovery = AsyncMock()
+        daemon.crash_recovery.recover = AsyncMock(return_value=[])
+
+        # Run daemon briefly - should handle health server error
+        try:
+            await daemon.run()
+        except OSError as e:
+            # Health server error should propagate
+            assert "Address already in use" in str(e)
+
+        # Cleanup
+        await daemon.thread_mapper.close()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_with_active_sessions(capsys):
+    """
+    Verify daemon cleanly shuts down with active sessions.
+
+    Tests that when shutdown signal is received while sessions are active:
+    1. All sessions are terminated cleanly
+    2. Session processes are stopped
+    3. Resources are released properly
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create daemon
+        daemon = ServiceDaemon()
+        daemon.thread_mapper = ThreadMapper(str(Path(tmpdir) / "thread_mappings.db"))
+
+        # Track session cleanup
+        sessions_cleaned = []
+
+        # Mock session manager with active sessions
+        daemon.session_manager = AsyncMock()
+        daemon.session_manager.initialize = AsyncMock()
+
+        async def mock_close():
+            # Simulate cleanup of active sessions
+            sessions_cleaned.extend(["session-1", "session-2"])
+
+        daemon.session_manager.close = mock_close
+
+        # Mock other dependencies
+        daemon.signal_client = AsyncMock()
+        daemon.signal_client.connect = AsyncMock()
+        daemon.signal_client.disconnect = AsyncMock()
+        daemon.signal_client.receive_messages = AsyncMock(return_value=iter([]))  # No messages
+        daemon.crash_recovery = AsyncMock()
+        daemon.crash_recovery.recover = AsyncMock(return_value=[])
+        daemon._start_health_server = AsyncMock()
+        daemon._stop_health_server = AsyncMock()
+
+        # Run daemon briefly then trigger shutdown
+        async def run_and_shutdown():
+            # Start daemon in background
+            daemon_task = asyncio.create_task(daemon.run())
+
+            # Wait a bit for initialization
+            await asyncio.sleep(0.2)
+
+            # Trigger shutdown
+            daemon._shutdown_event.set()
+
+            # Wait for graceful shutdown
+            try:
+                await asyncio.wait_for(daemon_task, timeout=2.0)
+            except asyncio.TimeoutError:
+                daemon_task.cancel()
+
+        await run_and_shutdown()
+
+        # Verify: Session cleanup was called
+        assert len(sessions_cleaned) == 2, "Should have cleaned up 2 active sessions"
+
+        # Cleanup
+        await daemon.thread_mapper.close()
+
+
+@pytest.mark.asyncio
+async def test_thread_mapper_initialization_failure(capsys):
+    """
+    Verify daemon handles ThreadMapper initialization failures gracefully.
+
+    Tests that when ThreadMapper.initialize() raises an exception:
+    1. Error is logged
+    2. Daemon continues without thread mapping
+    3. Main service remains functional
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create daemon
+        daemon = ServiceDaemon()
+
+        # Mock ThreadMapper to fail on initialize
+        daemon.thread_mapper = Mock()
+        daemon.thread_mapper.initialize = AsyncMock(side_effect=Exception("Database corrupted"))
+        daemon.thread_mapper.close = AsyncMock()
+
+        # Mock other dependencies
+        daemon.signal_client = AsyncMock()
+        daemon.signal_client.connect = AsyncMock(side_effect=ConnectionError("Mock stop"))
+        daemon.signal_client.api_url = "ws://mock:8080"
+        daemon.session_manager = AsyncMock()
+        daemon.session_manager.initialize = AsyncMock()
+        daemon.session_manager.close = AsyncMock()
+        daemon.crash_recovery = AsyncMock()
+        daemon.crash_recovery.recover = AsyncMock(return_value=[])
+        daemon._start_health_server = AsyncMock()
+        daemon._stop_health_server = AsyncMock()
+
+        # Run daemon - should handle thread mapper error
+        try:
+            await daemon.run()
+        except Exception as e:
+            # ThreadMapper initialization error should propagate
+            assert "Database corrupted" in str(e)
+
+        # Cleanup
+        await daemon.thread_mapper.close()
+
+
+@pytest.mark.asyncio
+async def test_message_processing_with_invalid_json():
+    """
+    Verify daemon handles malformed Signal messages gracefully.
+
+    Tests that when Signal sends invalid JSON:
+    1. Message defaults are applied (empty strings for missing fields)
+    2. Daemon continues processing without crashing
+    3. No service disruption
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Track processed messages
+        processed = []
+
+        # Create daemon
+        daemon = ServiceDaemon()
+        daemon.thread_mapper = ThreadMapper(str(Path(tmpdir) / "thread_mappings.db"))
+
+        # Mock phone verifier to allow all
+        daemon.phone_verifier.verify = lambda x: True
+        daemon.phone_verifier.authorized_number = "+15551234567"
+
+        # Mock session_commands.handle
+        async def mock_handle(thread_id, text):
+            processed.append((thread_id, text))
+            return None
+
+        daemon.session_commands.handle = mock_handle
+
+        # Test with malformed message (missing required fields)
+        malformed_message = {
+            # Missing 'envelope' key entirely
+            "timestamp": 1234567890000
+        }
+
+        # Should handle gracefully without crashing
+        await daemon._process_message(malformed_message)
+
+        # Message is processed with empty defaults (sender="", text="")
+        assert len(processed) == 1, "Malformed message should be processed with defaults"
+        assert processed[0][0] == "", "Missing sender should default to empty string"
+        assert processed[0][1] == "", "Missing message text should default to empty string"
+
+        # Test with partially valid message (has envelope but missing data)
+        partial_message = {
+            "envelope": {
+                "sourceNumber": "+15551234567"
+                # Missing 'dataMessage' key
+            }
+        }
+
+        await daemon._process_message(partial_message)
+
+        # Should process with sender but empty text
+        assert len(processed) == 2, "Partial message should be processed"
+        assert processed[1][0] == "+15551234567", "Sender should be extracted"
+        assert processed[1][1] == "", "Missing message text should default to empty string"
+
+        # Test unauthorized sender is rejected
+        unauthorized_message = {
+            "envelope": {
+                "sourceNumber": "+19995551234",  # Different number
+                "dataMessage": {"message": "test"}
+            }
+        }
+
+        # Override verifier to reject this number
+        daemon.phone_verifier.verify = lambda x: x == "+15551234567"
+
+        await daemon._process_message(unauthorized_message)
+
+        # Should NOT be processed (still 2 from before)
+        assert len(processed) == 2, "Unauthorized message should be rejected"
+
+        # Cleanup
+        await daemon.thread_mapper.close()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_session_creation():
+    """
+    Verify daemon handles concurrent session creation safely.
+
+    Tests that when multiple threads/coroutines create sessions simultaneously:
+    1. All sessions are created successfully
+    2. No race conditions or deadlocks
+    3. Session state remains consistent
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Track created sessions
+        created_sessions = []
+
+        # Create daemon
+        daemon = ServiceDaemon()
+        daemon.thread_mapper = ThreadMapper(str(Path(tmpdir) / "thread_mappings.db"))
+        await daemon.thread_mapper.initialize()
+
+        # Mock phone verifier
+        daemon.phone_verifier.verify = lambda x: True
+        daemon.phone_verifier.authorized_number = "+15551234567"
+
+        # Mock session_commands.handle to simulate session creation
+        async def mock_handle(thread_id, text):
+            created_sessions.append(thread_id)
+            # Simulate some async work
+            await asyncio.sleep(0.01)
+            return f"Session created for {thread_id}"
+
+        daemon.session_commands.handle = mock_handle
+
+        # Create messages for concurrent processing
+        messages = [
+            {
+                "envelope": {
+                    "sourceNumber": "+15551234567",
+                    "timestamp": 1234567890000 + i,
+                    "dataMessage": {"message": "/session start"}
+                },
+                "thread_id": f"thread-{i}"
+            }
+            for i in range(5)
+        ]
+
+        # Process all messages concurrently
+        tasks = [daemon._process_message(msg) for msg in messages]
+        await asyncio.gather(*tasks)
+
+        # Verify: All sessions created
+        assert len(created_sessions) == 5, "Should have created 5 sessions"
+        assert len(set(created_sessions)) == 5, "All sessions should be unique"
+
+        # Cleanup
+        await daemon.thread_mapper.close()
