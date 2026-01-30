@@ -122,3 +122,145 @@ class TestNotificationFormatter:
         event = {"type": "ignored", "details": {}, "urgency": UrgencyLevel.SILENT}
         result = self.formatter.format(event)
         assert result == ""
+
+    def test_format_approval_needed_with_target_only(self):
+        """Approval events with target but no lines should format without line count."""
+        event = {
+            "type": "approval_needed",
+            "details": {"tool": "Write", "target": "config.json"},
+            "urgency": UrgencyLevel.URGENT,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("🚨")
+        assert "*Approval Needed*" in result
+        assert "Write config.json" in result
+        assert "lines" not in result
+
+    def test_format_approval_needed_with_tool_only(self):
+        """Approval events with only tool should use generic message."""
+        event = {
+            "type": "approval_needed",
+            "details": {"tool": "Bash"},
+            "urgency": UrgencyLevel.URGENT,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("🚨")
+        assert "Bash requires approval" in result
+
+    def test_format_progress_with_tool_and_target_no_lines(self):
+        """Progress events with tool and target but no lines should format without line count."""
+        event = {
+            "type": "progress",
+            "details": {"tool": "Grep", "target": "src/"},
+            "urgency": UrgencyLevel.INFORMATIONAL,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("ℹ️")
+        assert "Grep src/" in result
+        assert "lines" not in result
+
+    def test_format_progress_with_no_details(self):
+        """Progress events without details should use generic Processing message."""
+        event = {
+            "type": "progress",
+            "details": {},
+            "urgency": UrgencyLevel.INFORMATIONAL,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("ℹ️")
+        assert "Processing..." in result
+
+    def test_format_reconnection_with_catch_up_summary(self):
+        """Reconnection events with catch-up summary should prioritize summary over state."""
+        event = {
+            "type": "reconnection",
+            "details": {
+                "summary": "Back online. 5 commands executed, 12 tool calls completed.",
+                "state": "CONNECTED",
+            },
+            "urgency": UrgencyLevel.IMPORTANT,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("⚠️")
+        assert "Back online" in result
+        assert "5 commands executed" in result
+
+    def test_format_reconnection_with_state_and_attempt(self):
+        """Reconnection events with state and attempt should format both."""
+        event = {
+            "type": "reconnection",
+            "details": {"state": "RECONNECTING", "attempt": 2},
+            "urgency": UrgencyLevel.IMPORTANT,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("⚠️")
+        assert "RECONNECTING (attempt 2)" in result
+
+    def test_format_reconnection_with_state_only(self):
+        """Reconnection events with only state should show state."""
+        event = {
+            "type": "reconnection",
+            "details": {"state": "DISCONNECTED"},
+            "urgency": UrgencyLevel.IMPORTANT,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("⚠️")
+        assert "DISCONNECTED" in result
+
+    def test_format_reconnection_with_no_details(self):
+        """Reconnection events without details should use generic message."""
+        event = {
+            "type": "reconnection",
+            "details": {},
+            "urgency": UrgencyLevel.IMPORTANT,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("⚠️")
+        assert "Connection state changed" in result
+
+    def test_format_unknown_event_type_with_message(self):
+        """Unknown event types should use generic fallback with message."""
+        event = {
+            "type": "custom_event",
+            "details": {"message": "Something happened"},
+            "urgency": UrgencyLevel.INFORMATIONAL,
+        }
+        result = self.formatter.format(event)
+        assert result.startswith("ℹ️")
+        assert "*Custom_Event*" in result  # .title() keeps underscores
+        assert "Something happened" in result
+
+    def test_format_unknown_event_type_with_session_id_and_message(self):
+        """Unknown events with session ID and message should show both."""
+        event = {
+            "type": "custom",
+            "details": {"message": "Action completed"},
+            "session_id": "xyz789ab-1234-5678-9012-345678901234",
+            "urgency": UrgencyLevel.INFORMATIONAL,
+        }
+        result = self.formatter.format(event)
+        assert "Session xyz789ab" in result
+        assert "Action completed" in result
+
+    def test_format_unknown_event_type_with_session_id_only(self):
+        """Unknown events with only session ID should show session."""
+        event = {
+            "type": "custom",
+            "details": {},
+            "session_id": "abc123de-f456-7890-1234-567890abcdef",
+            "urgency": UrgencyLevel.INFORMATIONAL,
+        }
+        result = self.formatter.format(event)
+        assert "Session abc123de" in result
+
+    def test_format_empty_event(self):
+        """Events with no details or session should return empty summary."""
+        event = {
+            "type": "unknown",
+            "details": {},
+            "urgency": UrgencyLevel.INFORMATIONAL,
+        }
+        result = self.formatter.format(event)
+        # Should not crash, emoji and title should be present
+        assert result.startswith("ℹ️")
+        assert "*Unknown*" in result
