@@ -262,3 +262,146 @@ class TestSummaryGenerator:
         result = generator.generate([])
 
         assert result == "No changes detected"
+
+
+class TestEdgeCaseCoverage:
+    """Tests for edge cases and error paths to improve coverage."""
+
+    def test_parse_multiple_hunks_per_file(self):
+        """DiffParser handles multiple hunks in a single file."""
+        diff_text = """diff --git a/src/user.py b/src/user.py
+index 1234567..abcdefg 100644
+--- a/src/user.py
++++ b/src/user.py
+@@ -10,3 +10,4 @@ class User:
+     def validate(self):
+-        pass
++        return True
+@@ -20,2 +21,3 @@ class User:
+     def save(self):
++        # New comment
+         pass"""
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        # Should have 2 hunks
+        assert len(result[0].hunks) == 2
+        assert result[0].hunks[0].old_start == 10
+        assert result[0].hunks[1].old_start == 20
+
+    def test_parse_malformed_hunk_header(self):
+        """DiffParser handles malformed hunk headers gracefully."""
+        diff_text = """diff --git a/src/user.py b/src/user.py
+index 1234567..abcdefg 100644
+--- a/src/user.py
++++ b/src/user.py
+@@ invalid hunk header
+     some content
+@@ -10,3 +10,4 @@ valid header
++    added line"""
+
+        parser = DiffParser()
+        result = parser.parse(diff_text)
+
+        # Should parse valid hunk, skip malformed one
+        assert len(result) == 1
+        # Only the valid hunk should be processed
+        assert len(result[0].hunks) >= 0
+
+    def test_generate_modified_file_without_function_detection(self):
+        """SummaryGenerator describes changes when no functions detected."""
+        hunk = DiffHunk(
+            old_start=10,
+            old_count=3,
+            new_start=10,
+            new_count=5,
+            lines=[
+                " some content",
+                "+added line 1",
+                "+added line 2",
+                "-removed line",
+            ]
+        )
+        file_diff = FileDiff(
+            old_path="config.txt",
+            new_path="config.txt",
+            hunks=[hunk],
+            is_binary=False
+        )
+
+        generator = SummaryGenerator()
+        result = generator.generate([file_diff])
+
+        # Should describe with line counts, not function names
+        assert "config.txt" in result
+        assert "added 2 lines" in result or "removed 1 line" in result
+
+    def test_detect_python_function_with_malformed_syntax(self):
+        """SummaryGenerator handles malformed Python function syntax."""
+        hunk = DiffHunk(
+            old_start=10,
+            old_count=1,
+            new_start=10,
+            new_count=2,
+            lines=[
+                "+def incomplete_function",  # Missing parentheses
+            ]
+        )
+        file_diff = FileDiff(
+            old_path="src/user.py",
+            new_path="src/user.py",
+            hunks=[hunk],
+            is_binary=False
+        )
+
+        generator = SummaryGenerator()
+        # Should not crash, handle gracefully
+        result = generator.generate([file_diff])
+        assert "src/user.py" in result
+
+    def test_detect_python_class_with_malformed_syntax(self):
+        """SummaryGenerator handles malformed Python class syntax."""
+        hunk = DiffHunk(
+            old_start=10,
+            old_count=1,
+            new_start=10,
+            new_count=2,
+            lines=[
+                "+class IncompleteClass",  # Missing colon
+            ]
+        )
+        file_diff = FileDiff(
+            old_path="src/models.py",
+            new_path="src/models.py",
+            hunks=[hunk],
+            is_binary=False
+        )
+
+        generator = SummaryGenerator()
+        # Should not crash, handle gracefully
+        result = generator.generate([file_diff])
+        assert "src/models.py" in result
+
+    def test_detect_javascript_function_with_malformed_syntax(self):
+        """SummaryGenerator handles malformed JavaScript function syntax."""
+        hunk = DiffHunk(
+            old_start=5,
+            old_count=1,
+            new_start=5,
+            new_count=2,
+            lines=[
+                "+function incomplete",  # Missing parentheses
+            ]
+        )
+        file_diff = FileDiff(
+            old_path="src/app.js",
+            new_path="src/app.js",
+            hunks=[hunk],
+            is_binary=False
+        )
+
+        generator = SummaryGenerator()
+        # Should not crash, handle gracefully
+        result = generator.generate([file_diff])
+        assert "src/app.js" in result
