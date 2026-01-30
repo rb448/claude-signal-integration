@@ -39,6 +39,7 @@ Each phase includes a **TDD Strategy** section specifying:
 - [x] **Phase 11: Claude Integration Wiring Fixes** - Restore primary user flow (gap closure)
 - [x] **Phase 12: Test Coverage Improvement** - Unit tests for critical modules (quality enhancement)
 - [x] **Phase 13: Edge Case Coverage** - Edge case testing for 80-89% modules (optional quality boost)
+- [ ] **Phase 14: Final Edge Case Coverage** - Push remaining 80-89% modules to 95% (excellence tier)
 
 ## Phase Details
 
@@ -522,6 +523,40 @@ Plans:
 Plans:
 - [x] 13-01: Edge Case Coverage for Auto-Committer
 
+### Phase 14: Final Edge Case Coverage
+**Goal**: Push remaining 80-89% modules to 95%+ for comprehensive excellence
+**Depends on**: Phase 13 (Edge Case Coverage pattern established)
+**Requirements**: None (optional quality enhancement beyond v1.0 requirements)
+**Success Criteria** (what must be TRUE):
+  1. notification/formatter.py coverage ≥95% (from 87%)
+  2. signal/queue.py coverage ≥95% (from 88%)
+  3. claude/responder.py coverage ≥95% (from 89%)
+  4. claude/diff_processor.py coverage ≥95% (from 90%)
+  5. Overall project coverage ≥93% (from 91-92%)
+  6. All modules at 85%+ or 95%+ tier (zero below 80%)
+**TDD Strategy**: Test-first for uncovered edge cases
+  - **TDD (write tests FIRST):**
+    - Unit tests for empty/None content handling
+    - Unit tests for Unicode and character encoding edge cases
+    - Unit tests for queue overflow and concurrency
+    - Unit tests for error formatting and malformed input
+    - Unit tests for message chunking boundaries
+  - **Verification (after tests pass):**
+    - Run coverage report per module to verify ≥95%
+    - Run full test suite to ensure no regressions
+  - **Test-first execution order:**
+    1. Run coverage reports to identify uncovered lines per module
+    2. Write unit tests for notification/formatter edge cases (2-3 tests)
+    3. Write unit tests for signal/queue edge cases (2 tests)
+    4. Write unit tests for claude/responder edge cases (3 tests)
+    5. Write unit tests for claude/diff_processor edge cases (2 tests)
+    6. Run full coverage report to confirm all modules ≥95%
+**Research**: Not needed (testing existing implementations)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 14-01: Final Edge Case Coverage (4 modules: formatter, queue, responder, diff_processor)
+
 ## Progress
 
 **Execution Order:**
@@ -542,3 +577,4 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 �
 | 11. Wiring Fixes | 1/1 | Complete | 2026-01-28 |
 | 12. Test Coverage | 1/1 | Complete | 2026-01-29 |
 | 13. Edge Case Coverage | 1/1 | Complete | 2026-01-29 |
+| 14. Final Edge Case Coverage | 0/1 | Planned | - |
