@@ -1,23 +1,72 @@
 # Claude Code Signal Integration
 
-![Tests](https://github.com/USER/REPO/workflows/Tests/badge.svg)
-![Coverage](https://img.shields.io/codecov/c/github/USER/REPO)
+![Version](https://img.shields.io/badge/version-v1.0-blue)
+![Coverage](https://img.shields.io/badge/coverage-93--94%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-647%2B%20passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 
-This is the **Signal bot integration** project for mobile access to Claude Code sessions.
+**Complete mobile access to Claude Code via Signal.** Control development sessions, review code changes, manage approvals, and work across multiple projects—all from your phone using Signal's encrypted messaging.
 
-**Not** the CryptoTradingApp - that's in the parent directory.
+## ✨ v1.0 Features
 
-## Project Documentation
+- 🤖 **Signal Bot** - Real-time messaging with WebSocket, rate limiting, phone auth
+- 💾 **Session Management** - SQLite-persisted sessions with crash recovery
+- 🔄 **Claude Integration** - Bidirectional CLI streaming with mobile-optimized display
+- 📁 **Multi-Project** - Concurrent work across projects via thread mapping
+- ✅ **Approval System** - Gate destructive operations, emergency fix mode
+- 🔌 **Connection Resilience** - Auto-reconnect, message buffering, catch-up summaries
+- 🔔 **Notifications** - Configurable urgency tiers per thread
+- ⚙️ **Advanced** - Custom commands, emergency mode auto-approval
+- 🧪 **Quality** - 93-94% test coverage, 647+ tests, comprehensive CI/CD
 
-- Planning files: `.planning-signal/`
-- Project spec: `.planning-signal/PROJECT.md`
-- Roadmap: `.planning-signal/ROADMAP.md`
-- Requirements: `.planning-signal/REQUIREMENTS.md`
-- Current state: `.planning-signal/STATE.md`
+## 🚀 Quick Start
 
-## Quick Start
+### 1. Verify Deployment Readiness
+```bash
+./verify-deployment.sh
+```
 
-See `.planning-signal/ROADMAP.md` for phased development plan.
+### 2. Install Dependencies
+```bash
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -e ".[dev]"
+```
+
+### 3. Start Signal API
+```bash
+docker-compose up -d
+```
+
+### 4. Configure & Run
+```bash
+# Set your phone number in .env
+echo "AUTHORIZED_NUMBER=+1234567890" > .env
+
+# Run tests
+pytest --cov=src
+
+# Start daemon
+python -m src.daemon.service
+```
+
+### 5. Link Signal Account
+Send a QR code link request from Signal on your phone, then test:
+```
+/session help
+```
+
+**Full deployment guide:** See [DEPLOYMENT.md](DEPLOYMENT.md)
+
+## 📖 Documentation
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide with troubleshooting
+- **[.planning/MILESTONES.md](.planning/MILESTONES.md)** - v1.0 release notes and stats
+- **[.planning/PROJECT.md](.planning/PROJECT.md)** - Project vision and requirements
+- **[.planning/milestones/](.planning/milestones/)** - Archived roadmaps and requirements
 
 ## Development
 
