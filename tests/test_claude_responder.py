@@ -414,3 +414,100 @@ Second file:
         # Should update both messages
         assert "📎 Sent file1.py" in result
         assert "📎 Sent file2.js" in result
+
+
+class TestEdgeCaseCoverage:
+    """Tests for edge cases and error paths to improve coverage."""
+
+    def test_format_unknown_parsed_type(self):
+        """Test fallback for unknown ParsedOutput types."""
+        responder = SignalResponder()
+
+        # Create a mock object that's not a known ParsedOutput type
+        class UnknownType:
+            def __str__(self):
+                return "Unknown type content"
+
+        unknown = UnknownType()
+        result = responder.format(unknown)
+        assert result == "Unknown type content"
+
+    def test_format_tool_call_no_target_no_command(self):
+        """Test ToolCall with neither target nor command shows just tool name."""
+        responder = SignalResponder()
+        # Create a ToolCall with no target and no command
+        tool_call = ToolCall(type=OutputType.TOOL_CALL, tool="CustomTool")
+        result = responder.format(tool_call)
+        assert result == "🔧 CustomTool"
+
+    def test_format_diff_malformed_returns_content(self):
+        """Test malformed diff returns original content."""
+        responder = SignalResponder()
+
+        # Create malformed diff content (not a valid git diff)
+        malformed_diff = """This is not a valid diff
+        It's just some random text
+        that looks nothing like git diff output"""
+
+        result = responder._format_diff(malformed_diff)
+        # Should return as-is since parsing fails
+        assert result == malformed_diff
+
+    def test_split_with_code_block_fits_in_chunk(self):
+        """Test code block that fits entirely in max_len stays together."""
+        responder = SignalResponder()
+
+        # Small code block that fits in chunk
+        text = """Some intro text here.
+
+```python
+def hello():
+    print("Hello")
+```
+
+Some closing text."""
+
+        chunks = responder.split_for_signal(text, max_len=1600)
+        # Should be one chunk since it's small
+        assert len(chunks) == 1
+        assert "```python" in chunks[0]
+        assert "```" in chunks[0]
+
+    def test_split_with_large_code_block_splits_before_it(self):
+        """Test large code block causes split before the code block."""
+        responder = SignalResponder()
+
+        # Create scenario: text + large code block
+        intro_text = "A" * 200 + ". "  # Some intro text
+        large_code = "x" * 1500  # Code too large for single chunk
+
+        text = f"""{intro_text}
+
+```python
+{large_code}
+```"""
+
+        chunks = responder.split_for_signal(text, max_len=300)
+        # Should split before code block
+        assert len(chunks) > 1
+        # First chunk should be intro text
+        assert "A" * 200 in chunks[0]
+        # Code block should be in later chunk(s)
+        assert any("```python" in chunk for chunk in chunks[1:])
+
+    def test_split_with_code_block_at_start(self):
+        """Test code block starting early gets preserved."""
+        responder = SignalResponder()
+
+        # Code block at start
+        text = """```python
+def test():
+    pass
+```
+
+More text here that continues after the code block."""
+
+        chunks = responder.split_for_signal(text, max_len=1600)
+        # Should handle gracefully
+        assert len(chunks) >= 1
+        assert "```python" in chunks[0]
